@@ -96,6 +96,16 @@ Run tests from the `backend` directory:
 pytest -q
 ```
 
+## Explore NEOWISE observations
+
+Search the NEOWISE-R single-exposure source table around an ICRS position:
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/neowise/search?ra_deg=127.69444&dec_deg=-39.17760&radius_arcsec=15"
+```
+
+The response is ordered by Modified Julian Date (MJD) and includes W1/W2 profile-fit magnitudes, uncertainties, signal-to-noise values, and archive quality fields. Results are source-table measurements, not image cutouts. Quality flags are preserved rather than silently filtered; the catalog includes artifacts and low-quality detections, so a returned row is not by itself evidence of a moving object. NEOWISE observed in W1 (3.4 μm) and W2 (4.6 μm).
+
 ## Scientific data rules
 
 1. Preserve original FITS files; create derived products separately.
