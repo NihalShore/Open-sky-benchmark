@@ -58,7 +58,6 @@ async def health() -> dict[str, str]:
 @app.post("/api/v1/search")
 async def search_observations(request: SearchRequest) -> dict:
     """Discover public SPHEREx image products overlapping a sky coordinate."""
-    # Defensive check retained even though the request schema uses Literals.
     if not set(request.collections).issubset(ALLOWED_COLLECTIONS):
         raise HTTPException(status_code=422, detail="Unsupported SPHEREx collection")
 
@@ -75,8 +74,8 @@ async def search_observations(request: SearchRequest) -> dict:
         raise HTTPException(
             status_code=502,
             detail=(
-                "IRSA SPHEREx search failed. Retry the request or use a "
-                "previously cached real observation."
+                "IRSA SPHEREx search failed. Retry later; a cached fallback "
+                "has not been implemented in this build yet."
             ),
         ) from exc
 
