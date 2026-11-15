@@ -23,13 +23,14 @@ TimeLens is an exploration and investigation tool. It does not claim to detect o
 
 The first backend vertical slice is on the `feat/spherex-first-light` branch:
 
-- FastAPI health endpoint.
-- Coordinate-validated SPHEREx search endpoint.
-- IRSA SIA2 discovery through Astroquery.
-- Normalized observation metadata and archive provenance.
-- API tests using a mocked archive response.
+- FastAPI health and coordinate-validated SPHEREx search endpoints.
+- IRSA SIA2 discovery for DR1/QR3 spectral images and the DR1 All-Sky Cube.
+- Bounded FITS download and validation for the cube product.
+- Channel extraction using `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS`.
+- Coverage-masked, display-only PNG preview with archive provenance.
+- FITS-fixture tests, API contract tests, and a GitHub Actions test workflow.
 
-The current branch does **not** yet download or render FITS images. See [backend setup and status](backend/README.md).
+A live end-to-end IRSA download and local test run have **not yet been verified**. Spatial WCS rendering, time comparison, and source analysis remain future work. See [backend setup and status](backend/README.md).
 
 ## Official data sources
 
