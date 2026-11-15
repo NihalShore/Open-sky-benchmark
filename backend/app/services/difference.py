@@ -46,6 +46,8 @@ def compare_aligned_images(
     center = float(np.median(residuals))
     mad = float(np.median(np.abs(residuals - center)))
     robust_sigma = 1.4826 * mad
+    if robust_sigma <= np.finfo(float).eps:
+        robust_sigma = float(np.std(residuals - center))
 
     if not np.isfinite(robust_sigma) or robust_sigma <= np.finfo(float).eps:
         return {
