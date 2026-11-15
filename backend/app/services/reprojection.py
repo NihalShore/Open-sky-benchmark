@@ -48,13 +48,15 @@ def reproject_to_reference_grid(
         raise ReprojectionError(f"Could not transform WCS coordinates: {exc}") from exc
 
     height, width = image.shape
+    # WCS round-trips can put an exact edge pixel a few ulps outside the grid.
+    edge_tolerance = 1e-6
     inside = (
         np.isfinite(source_x)
         & np.isfinite(source_y)
-        & (source_x >= 0)
-        & (source_y >= 0)
-        & (source_x <= width - 1)
-        & (source_y <= height - 1)
+        & (source_x >= -edge_tolerance)
+        & (source_y >= -edge_tolerance)
+        & (source_x <= width - 1 + edge_tolerance)
+        & (source_y <= height - 1 + edge_tolerance)
     )
     output = np.full(output_shape, np.nan, dtype=np.float32)
     if not np.any(inside):
