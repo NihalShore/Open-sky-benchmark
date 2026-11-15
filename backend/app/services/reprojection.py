@@ -1,6 +1,8 @@
 """WCS-based image reprojection onto a reference pixel grid."""
 from __future__ import annotations
 
+from numbers import Integral
+
 import numpy as np
 from astropy.wcs import WCS
 
@@ -23,8 +25,13 @@ def reproject_to_reference_grid(
     image = np.asarray(image, dtype=np.float64)
     if image.ndim != 2:
         raise ReprojectionError("Input image must be two-dimensional")
-    if len(output_shape) != 2 or any(int(size) < 1 for size in output_shape):
-        raise ReprojectionError("output_shape must contain two positive dimensions")
+    if (
+        not isinstance(output_shape, (tuple, list))
+        or len(output_shape) != 2
+        or any(isinstance(size, bool) or not isinstance(size, Integral) or size < 1 for size in output_shape)
+    ):
+        raise ReprojectionError("output_shape must contain two positive integer dimensions")
+    output_shape = tuple(int(size) for size in output_shape)
 
     try:
         source_wcs = image_wcs.celestial
@@ -32,7 +39,7 @@ def reproject_to_reference_grid(
         if not source_wcs.has_celestial or not target_wcs.has_celestial:
             raise ReprojectionError("Both WCS objects must contain celestial axes")
 
-        yy, xx = np.indices(tuple(map(int, output_shape)), dtype=np.float64)
+        yy, xx = np.indices(output_shape, dtype=np.float64)
         world_lon, world_lat = target_wcs.pixel_to_world_values(xx, yy)
         source_x, source_y = source_wcs.world_to_pixel_values(world_lon, world_lat)
     except ReprojectionError:
@@ -49,7 +56,7 @@ def reproject_to_reference_grid(
         & (source_x <= width - 1)
         & (source_y <= height - 1)
     )
-    output = np.full(tuple(map(int, output_shape)), np.nan, dtype=np.float32)
+    output = np.full(output_shape, np.nan, dtype=np.float32)
     if not np.any(inside):
         return output
 
