@@ -106,6 +106,12 @@ curl "http://127.0.0.1:8000/api/v1/neowise/search?ra_deg=127.69444&dec_deg=-39.1
 
 The response is ordered by Modified Julian Date (MJD) and includes W1/W2 profile-fit magnitudes, uncertainties, signal-to-noise values, and archive quality fields. Results are source-table measurements, not image cutouts. Quality flags are preserved rather than silently filtered; the catalog includes artifacts and low-quality detections, so a returned row is not by itself evidence of a moving object. NEOWISE observed in W1 (3.4 μm) and W2 (4.6 μm).
 
+## Compare aligned image planes
+
+The first difference-imaging primitive is available in `app.services.difference`. It accepts two two-dimensional arrays that are already on the same pixel grid, in compatible units, and calibrated consistently. It masks pixels without finite coverage in both inputs, computes target-minus-reference residuals, estimates robust residual scatter, and ranks thresholded positive and negative residuals.
+
+This is a backend primitive, not a complete image-registration workflow. It does not reproject WCS grids, estimate shifts, match PSFs, correct photometric scale, or classify moving objects. Do not compare raw images from different instruments or processing levels without those compatibility steps.
+
 ## Scientific data rules
 
 1. Preserve original FITS files; create derived products separately.
