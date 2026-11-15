@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
 from app.services.irsa import ALLOWED_COLLECTIONS, search_spherex
+from app.services.neowise import search_neowise
 from app.services.spherex_cube import (
     CubeDataError,
     discover_cube_products,
@@ -95,6 +96,45 @@ async def search_observations(request: SearchRequest) -> dict:
             "SIA2 returns overlapping image-product metadata. An access URL may refer "
             "to a larger multi-extension FITS product, not an exact cutout."
         ),
+    }
+
+
+@app.get("/api/v1/neowise/search")
+async def search_neowise_sources(
+    ra_deg: float = Query(ge=0, lt=360),
+    dec_deg: float = Query(ge=-90, le=90),
+    radius_arcsec: float = Query(default=15, gt=0, le=1800),
+    limit: int = Query(default=200, ge=1, le=500),
+) -> dict:
+    """Return dated NEOWISE-R single-exposure source measurements."""
+    try:
+        detections = await run_in_threadpool(
+            search_neowise, ra_deg, dec_deg, radius_arcsec, limit
+        )
+    except Exception as exc:
+        logger.exception("NEOWISE single-exposure search failed")
+        raise HTTPException(status_code=502, detail="IRSA NEOWISE search failed; retry later") from exc
+
+    return {
+        "status": "completed",
+        "source_archive": "NASA/IPAC IRSA",
+        "catalog": "neowiser_p1bs_psd",
+        "query": {
+            "ra_deg": ra_deg,
+            "dec_deg": dec_deg,
+            "radius_arcsec": radius_arcsec,
+            "limit": limit,
+        },
+        "result_count": len(detections),
+        "detections": detections,
+        "time_field": "mjd",
+        "bands": ["W1", "W2"],
+        "notice": (
+            "Single-exposure catalog rows include real detections and artifacts. "
+            "Quality fields are returned for review; this endpoint does not classify "
+            "moving objects or confirm a source association."
+        ),
+        "synthetic": False,
     }
 
 
