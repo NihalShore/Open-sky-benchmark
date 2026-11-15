@@ -8,23 +8,25 @@ TimeLens is a science-first interface for exploring real SPHEREx infrared observ
 
 ### Implemented on `feat/spherex-first-light`
 
-- FastAPI application with a health endpoint.
-- Validated ICRS coordinate search request.
-- IRSA SIA2 discovery through Astroquery.
-- Default search across the SPHEREx DR1 and QR3 wide-survey collections.
-- Normalized observation metadata with provenance and a real/synthetic flag.
-- API contract tests using a mocked archive response.
+- FastAPI health endpoint and validated ICRS coordinate search.
+- IRSA SIA2 discovery through Astroquery for DR1 and QR3 spectral-image products.
+- Separate DR1 All-Sky Cube discovery through the documented `spherex_dr1_cube` collection.
+- Bounded FITS download from HTTPS URLs on the official IRSA host; redirects are not followed.
+- FITS validation and extraction from `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS`.
+- Coverage masking from `NHITS > 0`; channel wavelength metadata is read from the documented `WAVELENGTH`, `WL_MIN`, `WL_MAX`, `BANDWIDTH`, `R`, `DETECTOR`, and `SUBCHAN` columns.
+- FITS-header blank-channel check using `BLANKCH`; no-data channels are not silently rendered.
+- Display-only PNG preview with percentile stretch and explicit source/channel/coverage headers.
+- Unit and API contract tests using generated FITS fixtures and mocked archive calls.
 
-### Not implemented yet
+### Not implemented or not yet verified
 
-- FITS downloads or cutout retrieval.
-- FITS multi-extension inspection and science-image extraction.
-- Image normalization or browser rendering.
-- WCS reprojection and cross-epoch registration.
-- Timeline, blink comparator, spectral profile, or change analysis.
-- Persistent cache and deployed hosting.
+- A successful live end-to-end download from IRSA in this development session.
+- Spatial WCS rendering/reprojection onto a conventional sky grid.
+- Scientific source extraction, photometry, or uncertainty propagation.
+- Cross-epoch registration, blink comparison, or change-candidate scoring.
+- Persistent caching, frontend integration, and deployed hosting.
 
-These items are deliberately not represented as completed features.
+The tests in this branch have been authored but have **not yet been executed** in a Python environment. These items are not represented as completed features.
 
 ## Run the backend locally
 
@@ -70,6 +72,24 @@ curl -X POST http://127.0.0.1:8000/api/v1/search \\
 
 The endpoint returns SIA2 discovery metadata. An `access_url` identifies an archive product; it is not guaranteed to be a cutout exactly matching the requested search region.
 
+## Explore the DR1 All-Sky Cube
+
+Find cube tiles for a sky position:
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/cube/search?ra_deg=127.69444&dec_deg=-39.17760"
+```
+
+Render one channel from the first matching real FITS tile:
+
+```bash
+curl -o channel-1.png "http://127.0.0.1:8000/api/v1/cube/preview?ra_deg=127.69444&dec_deg=-39.17760&channel_index=0"
+```
+
+The channel index is zero-based (0–101). The PNG is a display preview, not a calibrated photometry product. Response headers report the source, channel, wavelength when present, coverage fraction, and units. The FITS cube's `NHITS` layer is used to mask pixels without input coverage. The cube already has zodiacal light subtracted; TimeLens does not subtract it a second time.
+
+IRSA documents the DR1 cube as 12,288 HEALPix order-5 NESTED tiles, each with 102 channels, and identifies the `IMAGE`, `NHITS`, `FLAGS`, `SPECTRAL_CHANNELS`, and `WCS-WAVE` extensions. The HiPS PNG tree is for visualization only; the FITS cube is used here. See the [official cube product description](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-products/) and [DR1 cube DOI](https://doi.org/10.26131/IRSA679).
+
 Run tests from the `backend` directory:
 
 ```bash
@@ -96,9 +116,9 @@ pytest -q
 
 ## Planned vertical slices
 
-1. **First light:** Search IRSA and return genuine observation metadata. (Current branch.)
-2. **FITS inspection:** Retrieve one real product, select its science HDU, preserve flags/variance, and read spatial and spectral WCS.
-3. **Browser image:** Render a documented science-image preview with masked pixels and explicit stretch metadata.
+1. **First light:** Search IRSA and return genuine observation metadata. (Implemented.)
+2. **Cube explorer:** Discover DR1 All-Sky Cube tiles, inspect FITS channels, mask missing coverage, and render a preview. (Implemented; live archive execution still needs verification.)
+3. **Spatial rendering:** Apply the cube's spatial WCS and show coordinates correctly on the image.
 4. **Temporal comparison:** Find compatible observations, reproject to a common grid, and display valid-coverage masks.
-5. **Spectral exploration:** Expose measured wavelength information and a source/region spectrum only where the product supports it.
+5. **Spectral exploration:** Build a wavelength profile from supported data and document its limitations.
 6. **Evidence report:** Explain each flagged change with data provenance, uncertainty, and limitations.
