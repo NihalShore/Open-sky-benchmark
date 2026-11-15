@@ -178,7 +178,11 @@ def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np
         if image_cube.shape != hits_cube.shape or image_cube.shape != flags_cube.shape:
             raise CubeDataError("IMAGE, NHITS, and FLAGS shapes do not match")
 
-        blank_channels = str(hdus[0].header.get("BLANKCH", "")).replace(" ", "")
+        blank_value = next(
+            (hdu.header.get("BLANKCH") for hdu in hdus if hdu.header.get("BLANKCH") is not None),
+            "",
+        )
+        blank_channels = str(blank_value).replace(" ", "")
         blank_values = {part for part in blank_channels.replace("[", "").replace("]", "").split(",") if part}
         if str(channel_index + 1) in blank_values:
             raise CubeDataError("The requested channel is marked blank by the FITS header")
