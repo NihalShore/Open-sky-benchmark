@@ -84,29 +84,28 @@ def _value(row: Any, key: str) -> Any:
 def download_cube(url: str) -> bytes:
     """Download one bounded FITS product without following redirects."""
     safe_url = trusted_cube_url(url)
-    response = requests.get(
+    chunks: list[bytes] = []
+    total = 0
+    with requests.get(
         safe_url,
         stream=True,
         timeout=REQUEST_TIMEOUT,
         allow_redirects=False,
         headers={"User-Agent": "SPHEREx-TimeLens/0.2"},
-    )
-    response.raise_for_status()
-    if 300 <= response.status_code < 400:
-        raise CubeDataError("Unexpected redirect from the archive")
-    content_length = response.headers.get("Content-Length")
-    if content_length and int(content_length) > MAX_FITS_BYTES:
-        raise CubeDataError("Cube exceeds the configured download limit")
-
-    chunks: list[bytes] = []
-    total = 0
-    for chunk in response.iter_content(chunk_size=1024 * 1024):
-        if not chunk:
-            continue
-        total += len(chunk)
-        if total > MAX_FITS_BYTES:
+    ) as response:
+        response.raise_for_status()
+        if 300 <= response.status_code < 400:
+            raise CubeDataError("Unexpected redirect from the archive")
+        content_length = response.headers.get("Content-Length")
+        if content_length and int(content_length) > MAX_FITS_BYTES:
             raise CubeDataError("Cube exceeds the configured download limit")
-        chunks.append(chunk)
+        for chunk in response.iter_content(chunk_size=1024 * 1024):
+            if not chunk:
+                continue
+            total += len(chunk)
+            if total > MAX_FITS_BYTES:
+                raise CubeDataError("Cube exceeds the configured download limit")
+            chunks.append(chunk)
     payload = b"".join(chunks)
     if not payload.startswith(b"SIMPLE"):
         raise CubeDataError("Archive response is not a FITS file")
@@ -122,11 +121,9 @@ def _channel_axis(image: np.ndarray, channel_count: int) -> int:
 
 def _channel_wavelengths(hdu: fits.BinTableHDU) -> list[float | None]:
     names = list(hdu.columns.names or [])
-    candidates = ("WAVELENGTH", "WAVE_CEN", "WAVE_CENT", "LAM_CEN", "LAMBDA", "WAVE")
-    selected = next((name for candidate in candidates for name in names if name.upper() == candidate), None)
-    if selected is None:
+    if "WAVELENGTH" not in names:
         return [None] * len(hdu.data)
-    values = np.asarray(hdu.data[selected]).reshape(-1)
+    values = np.asarray(hdu.data["WAVELENGTH"]).reshape(-1)
     output: list[float | None] = []
     for value in values:
         try:
@@ -135,6 +132,20 @@ def _channel_wavelengths(hdu: fits.BinTableHDU) -> list[float | None]:
         except (TypeError, ValueError):
             output.append(None)
     return output
+
+
+def _channel_value(row: Any, key: str) -> float | int | None:
+    """Read a documented scalar from one SPECTRAL_CHANNELS row."""
+    try:
+        value = row[key]
+        if np.ma.is_masked(value):
+            return None
+        number = float(value)
+        if not np.isfinite(number):
+            return None
+        return int(number) if key in {"DETECTOR", "SUBCHAN"} else number
+    except (KeyError, TypeError, ValueError, IndexError):
+        return None
 
 
 def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np.ndarray]:
@@ -180,6 +191,12 @@ def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np
             "channel_index": channel_index,
             "channel_number": channel_index + 1,
             "wavelength_um": wavelengths[channel_index],
+            "wavelength_min_um": _channel_value(channels_hdu.data[channel_index], "WL_MIN"),
+            "wavelength_max_um": _channel_value(channels_hdu.data[channel_index], "WL_MAX"),
+            "bandwidth_um": _channel_value(channels_hdu.data[channel_index], "BANDWIDTH"),
+            "resolving_power": _channel_value(channels_hdu.data[channel_index], "R"),
+            "detector": _channel_value(channels_hdu.data[channel_index], "DETECTOR"),
+            "subchannel": _channel_value(channels_hdu.data[channel_index], "SUBCHAN"),
             "image_shape": list(plane.shape),
             "valid_pixel_count": int(valid.size),
             "coverage_fraction": float(valid.size / plane.size),
@@ -190,6 +207,7 @@ def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np
             "blank_channels_header": blank_channels or None,
             "source_archive": "NASA/IPAC IRSA",
             "data_product": "SPHEREx DR1 All-Sky Cube",
+            "dataset_doi": "10.26131/IRSA679",
             "synthetic": False,
         }
         if valid.size:
