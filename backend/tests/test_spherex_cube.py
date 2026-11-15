@@ -28,7 +28,6 @@ def make_cube_fixture() -> bytes:
         fits.ImageHDU(data=nhits, name="NHITS"),
         fits.ImageHDU(data=flags, name="FLAGS"),
         channels,
-        fits.BinTableHDU.from_columns([], name="WCS-WAVE"),
     ])
     buffer = BytesIO()
     hdus.writeto(buffer)
