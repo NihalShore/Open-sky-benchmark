@@ -90,7 +90,7 @@ def test_cube_preview_returns_png_and_provenance_headers(monkeypatch):
     ])
     monkeypatch.setattr(main, "download_cube", lambda url: b"SIMPLE-fits-fixture")
     monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
-    monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\\x89PNG\\r\\n\\x1a\\nfixture")
+    monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\x89PNG\r\n\x1a\nfixture")
 
     response = client.get("/api/v1/cube/preview?ra_deg=127.6&dec_deg=-39.1&channel_index=0")
 
