@@ -54,3 +54,49 @@ def test_search_returns_normalized_real_archive_metadata(monkeypatch):
     assert payload["result_count"] == 1
     assert payload["synthetic"] is False
     assert payload["observations"][0]["observation_id"] == "TEST-OBS-001"
+
+
+
+def test_cube_search_uses_dr1_cube_collection_and_returns_provenance(monkeypatch):
+    def fake_discovery(ra_deg, dec_deg, radius_arcsec):
+        assert (ra_deg, dec_deg, radius_arcsec) == (127.6, -39.1, 30)
+        return [{
+            "observation_id": "Npix4659_cube",
+            "collection": "spherex_dr1_cube",
+            "access_url": "https://irsa.ipac.caltech.edu/example.fits",
+            "source_archive": "NASA/IPAC IRSA",
+            "synthetic": False,
+        }]
+
+    monkeypatch.setattr(main, "discover_cube_products", fake_discovery)
+    response = client.get("/api/v1/cube/search?ra_deg=127.6&dec_deg=-39.1")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["collection"] == "spherex_dr1_cube"
+    assert payload["result_count"] == 1
+    assert payload["products"][0]["synthetic"] is False
+
+
+def test_cube_preview_returns_png_and_provenance_headers(monkeypatch):
+    metadata = {
+        "channel_number": 1,
+        "wavelength_um": 0.8,
+        "coverage_fraction": 0.75,
+        "units": "MJy/sr",
+    }
+    monkeypatch.setattr(main, "discover_cube_products", lambda *args: [
+        {"access_url": "https://irsa.ipac.caltech.edu/example.fits"}
+    ])
+    monkeypatch.setattr(main, "download_cube", lambda url: b"SIMPLE-fits-fixture")
+    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
+    monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\\x89PNG\\r\\n\\x1a\\nfixture")
+
+    response = client.get("/api/v1/cube/preview?ra_deg=127.6&dec_deg=-39.1&channel_index=0")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.headers["x-spherex-source"] == "NASA/IPAC IRSA"
+    assert response.headers["x-spherex-channel"] == "1"
+    assert response.headers["x-spherex-wavelength-um"] == "0.8"
+    assert response.headers["x-spherex-synthetic"] == "false"
