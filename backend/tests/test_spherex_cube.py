@@ -18,7 +18,14 @@ def make_cube_fixture() -> bytes:
     nhits[:, 0, 0] = 0
     flags = np.zeros_like(image, dtype=np.uint16)
     channels = fits.BinTableHDU.from_columns([
-        fits.Column(name="WAVELENGTH", format="E", unit="um", array=np.linspace(0.8, 4.9, 102))
+        fits.Column(name="DETECTOR", format="I", array=np.ones(102, dtype=np.int16)),
+        fits.Column(name="SUBCHAN", format="I", array=np.arange(1, 103, dtype=np.int16)),
+        fits.Column(name="WAVELENGTH", format="E", unit="um", array=np.linspace(0.8, 4.9, 102)),
+        fits.Column(name="WL_MIN", format="E", unit="um", array=np.linspace(0.79, 4.89, 102)),
+        fits.Column(name="WL_MAX", format="E", unit="um", array=np.linspace(0.81, 4.91, 102)),
+        fits.Column(name="BANDWIDTH", format="E", unit="um", array=np.full(102, 0.02)),
+        fits.Column(name="R", format="E", array=np.full(102, 40.0)),
+        fits.Column(name="R_STD", format="E", array=np.full(102, 1.0)),
     ], name="SPECTRAL_CHANNELS")
     primary = fits.PrimaryHDU()
     primary.header["BLANKCH"] = "51,52"
@@ -40,6 +47,12 @@ def test_inspect_cube_returns_real_channel_metadata_and_masks_no_coverage():
     assert metadata["synthetic"] is False
     assert metadata["channel_number"] == 1
     assert metadata["wavelength_um"] == pytest.approx(0.8)
+    assert metadata["wavelength_min_um"] == pytest.approx(0.79)
+    assert metadata["wavelength_max_um"] == pytest.approx(0.81)
+    assert metadata["bandwidth_um"] == pytest.approx(0.02)
+    assert metadata["resolving_power"] == pytest.approx(40.0)
+    assert metadata["detector"] == 1
+    assert metadata["subchannel"] == 1
     assert metadata["coverage_fraction"] == pytest.approx(63 / 64)
     assert np.isnan(plane[0, 0])
     assert np.isfinite(plane[0, 1])
