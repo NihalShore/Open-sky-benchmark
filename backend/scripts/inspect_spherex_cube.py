@@ -30,13 +30,14 @@ def _header_summary(header: fits.Header) -> dict[str, Any]:
     }
 
 
-def _celestial_sample(header: fits.Header, shape: tuple[int, ...]) -> dict[str, Any]:
+def _celestial_sample(header: fits.Header) -> dict[str, Any]:
     try:
         wcs = WCS(header).celestial
-        if not wcs.has_celestial or len(shape) < 2:
-            return {"available": False, "reason": "No celestial WCS found"}
+        width = header.get("NAXIS1")
+        height = header.get("NAXIS2")
+        if not wcs.has_celestial or not width or not height:
+            return {"available": False, "reason": "No usable celestial WCS found"}
 
-        height, width = shape[-2:]
         pixels = {
             "center": ((width - 1) / 2, (height - 1) / 2),
             "lower_left": (0, 0),
@@ -72,9 +73,7 @@ def inspect_product(payload: bytes, product: dict[str, Any]) -> dict[str, Any]:
                 "header": _header_summary(hdu.header),
             }
             if hdu.name.upper() == "IMAGE" and data is not None:
-                item["celestial_wcs"] = _celestial_sample(
-                    hdu.header, tuple(data.shape)
-                )
+                item["celestial_wcs"] = _celestial_sample(hdu.header)
             if hdu.name.upper() == "SPECTRAL_CHANNELS" and data is not None:
                 item["rows"] = len(data)
                 item["columns"] = list(hdu.columns.names or [])
