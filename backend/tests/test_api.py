@@ -100,3 +100,42 @@ def test_cube_preview_returns_png_and_provenance_headers(monkeypatch):
     assert response.headers["x-spherex-channel"] == "1"
     assert response.headers["x-spherex-wavelength-um"] == "0.8"
     assert response.headers["x-spherex-synthetic"] == "false"
+
+
+
+def test_neowise_search_returns_time_ordered_archive_measurements(monkeypatch):
+    fake_detections = [
+        {
+            "mjd": 59000.0,
+            "w1_mag": 12.3,
+            "w2_mag": 11.8,
+            "photometric_quality": "AAXX",
+            "source_archive": "NASA/IPAC IRSA",
+            "synthetic": False,
+        }
+    ]
+
+    def fake_search(ra_deg, dec_deg, radius_arcsec, limit):
+        assert (ra_deg, dec_deg, radius_arcsec, limit) == (127.6, -39.1, 15, 25)
+        return fake_detections
+
+    monkeypatch.setattr(main, "search_neowise", fake_search)
+    response = client.get(
+        "/api/v1/neowise/search?ra_deg=127.6&dec_deg=-39.1&radius_arcsec=15&limit=25"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["catalog"] == "neowiser_p1bs_psd"
+    assert payload["time_field"] == "mjd"
+    assert payload["bands"] == ["W1", "W2"]
+    assert payload["detections"][0]["mjd"] == 59000.0
+    assert payload["synthetic"] is False
+
+
+def test_neowise_search_validates_limit():
+    response = client.get(
+        "/api/v1/neowise/search?ra_deg=127.6&dec_deg=-39.1&limit=501"
+    )
+
+    assert response.status_code == 422
