@@ -106,11 +106,29 @@ curl "http://127.0.0.1:8000/api/v1/neowise/search?ra_deg=127.69444&dec_deg=-39.1
 
 The response is ordered by Modified Julian Date (MJD) and includes W1/W2 profile-fit magnitudes, uncertainties, signal-to-noise values, and archive quality fields. Results are source-table measurements, not image cutouts. Quality flags are preserved rather than silently filtered; the catalog includes artifacts and low-quality detections, so a returned row is not by itself evidence of a moving object. NEOWISE observed in W1 (3.4 μm) and W2 (4.6 μm).
 
-## Compare aligned image planes
+## WCS image comparison
 
-The first difference-imaging primitive is available in `app.services.difference`. It accepts two two-dimensional arrays that are already on the same pixel grid, in compatible units, and calibrated consistently. It masks pixels without finite coverage in both inputs, computes target-minus-reference residuals, estimates robust residual scatter, and ranks thresholded positive and negative residuals.
+The backend comparison path is available through `app.services.image_pipeline.compare_wcs_images`. It accepts reference and target image planes with their celestial WCS objects, reprojects the target onto the reference grid, estimates the fraction of bilinear interpolation support backed by finite target pixels, masks insufficiently covered pixels, and runs the target-minus-reference difference engine.
 
-This is a backend primitive, not a complete image-registration workflow. It does not reproject WCS grids, estimate shifts, match PSFs, correct photometric scale, or classify moving objects. Do not compare raw images from different instruments or processing levels without those compatibility steps.
+The returned result includes the aligned target, coverage fraction, coverage mask, common-validity mask, difference image, significance plane when measurable, ranked positive/negative residual candidates, and processing flags. The default coverage threshold is 0.999; lower it only when partial interpolation support is acceptable for the analysis.
+
+Example:
+
+```python
+from app.services.image_pipeline import compare_wcs_images
+
+result = compare_wcs_images(
+    reference_image,
+    reference_wcs,
+    target_image,
+    target_wcs,
+    sigma_threshold=5.0,
+)
+```
+
+Both inputs must already use compatible units and photometric calibration. This pipeline does not perform photometric scaling, background matching, PSF matching, uncertainty propagation, or moving-object classification. The coverage fraction describes interpolation support from finite input pixels; it is not an exposure map or an instrument-provided footprint. A residual candidate is a follow-up target, not evidence of a moving object or Planet X.
+
+The difference engine treats zero median absolute deviation as unresolved residual scatter. It does not substitute a standard deviation that could be dominated by sparse outliers. In that case it returns no candidates and reports `no_resolvable_residual_scatter`.
 
 ## Scientific data rules
 
