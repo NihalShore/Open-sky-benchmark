@@ -7,7 +7,7 @@ from app.services.difference import DifferenceImageError, compare_aligned_images
 def test_difference_masks_non_overlapping_pixels_and_finds_injected_change():
     rng = np.random.default_rng(12)
     reference = rng.normal(0, 1, (40, 40))
-    target = reference.copy()
+    target = rng.normal(0, 1, (40, 40))
     target[8, 12] += 20.0
     reference[0, 0] = np.nan
 
