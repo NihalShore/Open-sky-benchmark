@@ -34,4 +34,4 @@ jobs:
           pip install -r requirements.txt
       - name: Run test suite
         working-directory: backend
-        run: pytest -q
+        run: python -m pytest -q
