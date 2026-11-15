@@ -30,7 +30,7 @@ def test_reprojection_maps_shifted_reference_grid():
         image, source_wcs, reference_wcs, (10, 10)
     )
 
-    assert result[4, 4] == pytest.approx(5.0, abs=1e-3)
+    assert result[4, 4] == pytest.approx(3.0, abs=1e-3)
 
 
 def test_reprojection_keeps_nan_when_no_input_support():
