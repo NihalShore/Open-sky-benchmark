@@ -26,7 +26,7 @@ TimeLens is a science-first interface for exploring real SPHEREx infrared observ
 - Cross-epoch registration, blink comparison, or change-candidate scoring.
 - Persistent caching, frontend integration, and deployed hosting.
 
-The tests in this branch have been authored but have **not yet been executed** in a Python environment. These items are not represented as completed features.
+A GitHub Actions workflow now runs `pytest -q` for backend changes. The connector has not yet returned a workflow run for this branch, so the suite remains **unverified** until a CI result is available. These items are not represented as completed features.
 
 ## Run the backend locally
 
