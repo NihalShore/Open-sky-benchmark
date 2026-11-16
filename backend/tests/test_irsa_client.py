@@ -76,3 +76,28 @@ def test_sia2_query_converts_skycoord_radius_to_adql_circle(monkeypatch):
         assert captured["collection"] == ["spherex_dr1"]
     finally:
         client.close()
+
+
+
+def test_timed_session_rejects_cross_host_redirects():
+    from requests import Response
+
+    session = TimedSession()
+    response = Response()
+    response.status_code = 302
+    response.url = "https://irsa.ipac.caltech.edu/query"
+    response.headers["Location"] = "https://attacker.example/collect"
+
+    assert session.get_redirect_target(response) is None
+
+
+def test_timed_session_allows_same_host_https_redirects():
+    from requests import Response
+
+    session = TimedSession()
+    response = Response()
+    response.status_code = 302
+    response.url = "https://irsa.ipac.caltech.edu/query"
+    response.headers["Location"] = "/TAP/sync"
+
+    assert session.get_redirect_target(response) == "/TAP/sync"
