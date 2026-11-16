@@ -66,7 +66,7 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
 
 ## Quick start
 
-The frontend and API are separate Vercel projects. The frontend uses the web directory; the FastAPI service uses the backend directory. The browser API base is open-sky-timelens-api.vercel.app.
+The frontend and API are separate Railway services. The frontend is served from the `web/` directory and the FastAPI service from `backend/`. The browser API base is `https://open-sky-benchmark-production.up.railway.app`.
 
 
 **Requirements:** Python 3.11+ (CI tests Python 3.13). Install and run from the `backend/` directory.
@@ -153,10 +153,15 @@ GitHub Actions is configured to run the backend test suite and frontend static/D
 
 ## Deployment layout
 
-- Frontend: Vercel project `open-sky-timelens`, root directory `web`.
-- API: Vercel project `open-sky-timelens-api`, root directory `backend` (note: scientific Python wheels and full DR1 FITS cubes can strain serverless bundle-size and memory limits; container/VM hosting is recommended for heavy cube workloads).
-- CORS: `TIMELENS_CORS_ORIGINS` overrides the default production, preview, and local origins.
+Production runs as two Railway services in the same project:
+
+- Frontend: `web/`, served by the Railway web service.
+- API: `backend/`, served by the Railway API service.
+- API base: `https://open-sky-benchmark-production.up.railway.app`.
+- CORS: `TIMELENS_CORS_ORIGINS` controls the allowed browser origins.
 - Python: API runtime pinned in `backend/.python-version`.
+
+The API health endpoint confirms process health only. It does not prove that IRSA is reachable. Verify archive discovery and FITS retrieval independently before describing a release as operational.
 
 ## Scientific integrity
 
