@@ -53,6 +53,12 @@ def trusted_cube_url(value: str) -> str:
 
 def discover_cube_products(ra_deg: float, dec_deg: float, radius_arcsec: float = 30) -> list[dict[str, Any]]:
     """Find DR1 All-Sky Cube tiles overlapping an ICRS position."""
+    if not np.isfinite(ra_deg) or not 0 <= ra_deg < 360:
+        raise ValueError("ra_deg must be in [0, 360)")
+    if not np.isfinite(dec_deg) or not -90 <= dec_deg <= 90:
+        raise ValueError("dec_deg must be in [-90, 90]")
+    if not np.isfinite(radius_arcsec) or not 0 < radius_arcsec <= 1800:
+        raise ValueError("radius_arcsec must be in (0, 1800]")
     position = SkyCoord(ra=ra_deg, dec=dec_deg, unit="deg", frame="icrs")
     table = new_irsa_client().query_sia(
         pos=(position, radius_arcsec * u.arcsec),
