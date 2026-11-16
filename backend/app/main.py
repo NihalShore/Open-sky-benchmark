@@ -208,35 +208,40 @@ async def cube_preview(
     radius_arcsec: float = Query(default=30, gt=0, le=1800),
 ) -> Response:
     """Return a display-only PNG made from a real DR1 FITS cube channel."""
-    async with _CUBE_PREVIEW_LIMIT:
-        payload = None
-        try:
-            products = await run_in_threadpool(
-                discover_cube_products, ra_deg, dec_deg, radius_arcsec
-            )
-            if not products:
-                raise HTTPException(status_code=404, detail="No DR1 cube tile covers this position")
-            payload = await run_in_threadpool(download_cube, products[0]["access_url"])
-            metadata, plane = await run_in_threadpool(
-                inspect_cube,
-                payload,
-                channel_index,
-                ra_deg=ra_deg,
-                dec_deg=dec_deg,
-                radius_arcsec=radius_arcsec,
-            )
-            metadata["observation_id"] = products[0].get("observation_id")
-            png = await run_in_threadpool(render_preview_png, plane)
-        except HTTPException:
-            raise
-        except CubeDataError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-        except Exception as exc:
-            logger.exception("SPHEREx cube preview failed")
-            raise HTTPException(status_code=502, detail="Could not retrieve or inspect the cube; retry later") from exc
-        finally:
-            if hasattr(payload, "close"):
-                payload.close()
+    try:
+        await asyncio.wait_for(_CUBE_PREVIEW_LIMIT.acquire(), timeout=0.05)
+    except TimeoutError as exc:
+        raise HTTPException(status_code=503, detail="Cube preview is busy; retry shortly") from exc
+
+    payload = None
+    try:
+        products = await run_in_threadpool(
+            discover_cube_products, ra_deg, dec_deg, radius_arcsec
+        )
+        if not products:
+            raise HTTPException(status_code=404, detail="No DR1 cube tile covers this position")
+        payload = await run_in_threadpool(download_cube, products[0]["access_url"])
+        metadata, plane = await run_in_threadpool(
+            inspect_cube,
+            payload,
+            channel_index,
+            ra_deg=ra_deg,
+            dec_deg=dec_deg,
+            radius_arcsec=radius_arcsec,
+        )
+        metadata["observation_id"] = products[0].get("observation_id")
+        png = await run_in_threadpool(render_preview_png, plane)
+    except HTTPException:
+        raise
+    except CubeDataError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("SPHEREx cube preview failed")
+        raise HTTPException(status_code=502, detail="Could not retrieve or inspect the cube; retry later") from exc
+    finally:
+        if hasattr(payload, "close"):
+            payload.close()
+        _CUBE_PREVIEW_LIMIT.release()
 
     headers = {
         "X-SPHEREX-Source": "NASA/IPAC IRSA",
