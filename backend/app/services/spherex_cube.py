@@ -7,7 +7,8 @@ not used for scientific measurements.
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Any
+from tempfile import SpooledTemporaryFile
+from typing import Any, BinaryIO
 from urllib.parse import urlparse
 
 import numpy as np
@@ -22,6 +23,8 @@ from PIL import Image
 IRSA_HOST = "irsa.ipac.caltech.edu"
 CUBE_COLLECTION = "spherex_dr1_cube"
 MAX_FITS_BYTES = 300 * 1024 * 1024
+MAX_CUBE_PLANE_BYTES = 128 * 1024 * 1024
+SPOOL_MEMORY_BYTES = 8 * 1024 * 1024
 REQUEST_TIMEOUT = (10, 90)
 
 
@@ -96,45 +99,53 @@ def _value(row: Any, key: str) -> Any:
         return None
 
 
-def download_cube(url: str) -> bytes:
-    """Download one bounded FITS product without following redirects."""
+def download_cube(url: str) -> BinaryIO:
+    """Stream one bounded FITS product to a spooled temporary file."""
     safe_url = trusted_cube_url(url)
-    chunks: list[bytes] = []
+    payload = SpooledTemporaryFile(max_size=SPOOL_MEMORY_BYTES, mode="w+b")
     total = 0
-    with requests.get(
-        safe_url,
-        stream=True,
-        timeout=REQUEST_TIMEOUT,
-        allow_redirects=False,
-        headers={"User-Agent": "SPHEREx-TimeLens/0.2"},
-    ) as response:
-        response.raise_for_status()
-        if 300 <= response.status_code < 400:
-            raise CubeDataError("Unexpected redirect from the archive")
-        content_length = response.headers.get("Content-Length")
-        if content_length:
-            try:
-                declared_size = int(content_length)
-            except (TypeError, ValueError) as exc:
-                raise CubeDataError("Archive returned an invalid Content-Length") from exc
-            if declared_size < 0 or declared_size > MAX_FITS_BYTES:
-                raise CubeDataError("Cube exceeds the configured download limit")
-        for chunk in response.iter_content(chunk_size=1024 * 1024):
-            if not chunk:
-                continue
-            total += len(chunk)
-            if total > MAX_FITS_BYTES:
-                raise CubeDataError("Cube exceeds the configured download limit")
-            chunks.append(chunk)
-    payload = b"".join(chunks)
-    if not payload.startswith(b"SIMPLE"):
-        raise CubeDataError("Archive response is not a FITS file")
-    return payload
+    try:
+        with requests.get(
+            safe_url,
+            stream=True,
+            timeout=REQUEST_TIMEOUT,
+            allow_redirects=False,
+            headers={"User-Agent": "SPHEREx-TimeLens/0.2"},
+        ) as response:
+            if 300 <= response.status_code < 400:
+                raise CubeDataError("Unexpected redirect from the archive")
+            response.raise_for_status()
+            content_length = response.headers.get("Content-Length")
+            if content_length:
+                try:
+                    declared_size = int(content_length)
+                except (TypeError, ValueError) as exc:
+                    raise CubeDataError("Archive returned an invalid Content-Length") from exc
+                if declared_size < 0 or declared_size > MAX_FITS_BYTES:
+                    raise CubeDataError("Cube exceeds the configured download limit")
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > MAX_FITS_BYTES:
+                    raise CubeDataError("Cube exceeds the configured download limit")
+                payload.write(chunk)
+        payload.seek(0)
+        if payload.read(6) != b"SIMPLE":
+            raise CubeDataError("Archive response is not an uncompressed FITS file")
+        payload.seek(0)
+        return payload
+    except Exception:
+        payload.close()
+        raise
 
 
 def _channel_axis(
-    image: np.ndarray, channel_count: int, header: fits.Header | None = None
+    image: np.ndarray | tuple[int, ...],
+    channel_count: int,
+    header: fits.Header | None = None,
 ) -> int:
+    image_shape = image.shape if hasattr(image, "shape") else tuple(image)
     if header is not None:
         try:
             wcs = WCS(header)
@@ -152,14 +163,14 @@ def _channel_axis(
                 )
                 if len(pixel_axes) == 1:
                     numpy_axis = image.ndim - 1 - int(pixel_axes[0])
-                    if 0 <= numpy_axis < image.ndim and image.shape[numpy_axis] == channel_count:
+                    if 0 <= numpy_axis < len(image_shape) and image_shape[numpy_axis] == channel_count:
                         return numpy_axis
         except Exception:
             pass
 
-    axes = [axis for axis, size in enumerate(image.shape) if size == channel_count]
+    axes = [axis for axis, size in enumerate(image_shape) if size == channel_count]
     if len(axes) != 1:
-        raise CubeDataError(f"Cannot identify spectral axis from FITS WCS or IMAGE shape {image.shape}")
+        raise CubeDataError(f"Cannot identify spectral axis from FITS WCS or IMAGE shape {image_shape}")
     return axes[0]
 
 
@@ -192,22 +203,39 @@ def _channel_value(row: Any, key: str) -> float | int | None:
         return None
 
 
-def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np.ndarray]:
-    """Validate a DR1 cube and return metadata plus a coverage-masked image plane."""
+def inspect_cube(payload: bytes | BinaryIO, channel_index: int) -> tuple[dict[str, Any], np.ndarray]:
+    """Read one channel from a DR1 cube without materializing the full cube."""
     if channel_index < 0:
         raise CubeDataError("channel_index must be non-negative")
 
-    with fits.open(BytesIO(payload), memmap=False) as hdus:
+    if isinstance(payload, (bytes, bytearray)):
+        source: BinaryIO = BytesIO(payload)
+        memmap = False
+    else:
+        source = payload
+        source.seek(0)
+        memmap = True
+
+    with fits.open(source, memmap=memmap, lazy_load_hdus=True) as hdus:
         by_name = {hdu.name.upper(): hdu for hdu in hdus}
         required = {"IMAGE", "NHITS", "FLAGS", "SPECTRAL_CHANNELS"}
         missing = required - set(by_name)
         if missing:
             raise CubeDataError(f"Cube is missing required extensions: {', '.join(sorted(missing))}")
 
-        image = np.asarray(by_name["IMAGE"].data)
-        nhits = np.asarray(by_name["NHITS"].data)
-        flags = np.asarray(by_name["FLAGS"].data)
+        image_hdu = by_name["IMAGE"]
+        nhits_hdu = by_name["NHITS"]
+        flags_hdu = by_name["FLAGS"]
         channels_hdu = by_name["SPECTRAL_CHANNELS"]
+        if any(isinstance(hdu, fits.CompImageHDU) for hdu in (image_hdu, nhits_hdu, flags_hdu)):
+            raise CubeDataError("Tile-compressed FITS image extensions are not supported")
+
+        image_shape = image_hdu.shape
+        nhits_shape = nhits_hdu.shape
+        flags_shape = flags_hdu.shape
+        if not image_shape or image_shape != nhits_shape or image_shape != flags_shape:
+            raise CubeDataError("IMAGE, NHITS, and FLAGS shapes do not match")
+
         wavelengths = _channel_wavelengths(channels_hdu)
         channel_count = len(wavelengths)
         if channel_count != 102:
@@ -215,24 +243,38 @@ def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np
         if channel_index >= channel_count:
             raise CubeDataError(f"channel_index must be between 0 and {channel_count - 1}")
 
-        axis = _channel_axis(image, channel_count, by_name["IMAGE"].header)
-        image_cube = np.moveaxis(image, axis, 0)
-        hits_cube = np.moveaxis(nhits, axis, 0)
-        flags_cube = np.moveaxis(flags, axis, 0)
-        if image_cube.shape != hits_cube.shape or image_cube.shape != flags_cube.shape:
-            raise CubeDataError("IMAGE, NHITS, and FLAGS shapes do not match")
+        axis = _channel_axis(image_shape, channel_count, image_hdu.header)
+        plane_shape = tuple(size for index, size in enumerate(image_shape) if index != axis)
+        pixels = int(np.prod(plane_shape, dtype=np.int64))
+        bitpix_bytes = {8: 1, 16: 2, 32: 4, 64: 8, -32: 4, -64: 8}
+        plane_bytes = pixels * sum(
+            bitpix_bytes.get(int(hdu.header.get("BITPIX", -32)), 8)
+            for hdu in (image_hdu, nhits_hdu, flags_hdu)
+        )
+        if plane_bytes > MAX_CUBE_PLANE_BYTES:
+            raise CubeDataError("Selected cube plane exceeds the configured memory limit")
+
+        index = [slice(None)] * len(image_shape)
+        index[axis] = channel_index
+        index = tuple(index)
+        plane = np.asarray(image_hdu.section[index], dtype=np.float32).copy()
+        hits = np.asarray(nhits_hdu.section[index])
+        flags = np.asarray(flags_hdu.section[index])
+        if plane.shape != plane_shape or hits.shape != plane_shape or flags.shape != plane_shape:
+            raise CubeDataError("Selected IMAGE, NHITS, and FLAGS planes do not match")
 
         blank_value = next(
             (hdu.header.get("BLANKCH") for hdu in hdus if hdu.header.get("BLANKCH") is not None),
             "",
         )
         blank_channels = str(blank_value).replace(" ", "")
-        blank_values = {part for part in blank_channels.replace("[", "").replace("]", "").split(",") if part}
+        blank_values = {
+            part for part in blank_channels.replace("[", "").replace("]", "").split(",") if part
+        }
         if str(channel_index + 1) in blank_values:
             raise CubeDataError("The requested channel is marked blank by the FITS header")
 
-        plane = image_cube[channel_index].astype(np.float32, copy=True)
-        coverage = (hits_cube[channel_index] > 0) & np.isfinite(plane)
+        coverage = (hits > 0) & np.isfinite(plane)
         plane[~coverage] = np.nan
         valid = plane[np.isfinite(plane)]
         metadata = {
@@ -248,11 +290,9 @@ def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np
             "image_shape": list(plane.shape),
             "valid_pixel_count": int(valid.size),
             "coverage_fraction": float(valid.size / plane.size),
-            "units": str(by_name["IMAGE"].header.get("BUNIT", "unknown")),
+            "units": str(image_hdu.header.get("BUNIT", "unknown")),
             "flags_extension_present": True,
-            "flags_nonzero_pixel_count": int(np.count_nonzero(
-                (flags_cube[channel_index] != 0) & (hits_cube[channel_index] > 0)
-            )),
+            "flags_nonzero_pixel_count": int(np.count_nonzero((flags != 0) & (hits > 0))),
             "blank_channels_header": blank_channels or None,
             "source_archive": "NASA/IPAC IRSA",
             "data_product": "SPHEREx DR1 All-Sky Cube",
