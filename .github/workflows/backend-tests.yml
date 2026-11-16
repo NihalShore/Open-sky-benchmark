@@ -2,7 +2,7 @@ name: Backend and web checks
 
 on:
   pull_request:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", "arena/**"]
     paths:
       - "backend/**"
       - "web/**"
