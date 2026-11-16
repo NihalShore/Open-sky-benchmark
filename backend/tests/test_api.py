@@ -150,10 +150,13 @@ def test_cors_allows_production_frontend_and_exposes_fits_headers():
     assert "x-spherex-flags-nonzero-pixels" in exposed
 
 
-def test_cors_allows_time_lens_preview_origin():
+def test_cors_rejects_unlisted_vercel_project_origin():
     response = client.options(
         "/api/v1/health",
-        headers={"Origin": "https://open-sky-timelens-git-feature-achme-63b5.vercel.app", "Access-Control-Request-Method": "GET"},
+        headers={
+            "Origin": "https://open-sky-timelens-untrusted.vercel.app",
+            "Access-Control-Request-Method": "GET",
+        },
     )
-    assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"].startswith("https://open-sky-timelens-")
+    assert response.status_code == 400
+    assert "access-control-allow-origin" not in response.headers
