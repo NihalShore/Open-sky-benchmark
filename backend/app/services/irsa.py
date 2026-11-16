@@ -6,6 +6,7 @@ It deliberately does not download FITS files yet.
 from __future__ import annotations
 
 from contextlib import contextmanager
+from io import BytesIO
 from typing import Any, Iterator
 from urllib.parse import urljoin, urlparse
 
@@ -13,6 +14,7 @@ import astropy.units as u
 import numpy as np
 import requests
 from astropy.coordinates import SkyCoord
+from astropy.table import Table
 from astroquery.ipac.irsa.core import IrsaClass
 
 ALLOWED_COLLECTIONS = (
@@ -180,6 +182,79 @@ def normalize_observation(row: Any) -> dict[str, Any]:
     }
 
 
+def query_sia_direct(
+    ra_deg: float,
+    dec_deg: float,
+    radius_arcsec: float,
+    collections: list[str],
+    *,
+    maxrec: int = MAX_SIA_RECORDS,
+) -> Table:
+    """Query the documented SIA2 URL directly, without a VOSI capabilities lookup."""
+    if not collections:
+        raise ValueError("At least one SPHEREx collection is required")
+    deduped = list(dict.fromkeys(collections))
+    invalid = sorted(set(deduped) - ALLOWED_COLLECTION_SET)
+    if invalid:
+        raise ValueError(f"Unsupported SPHEREx collection(s): {', '.join(invalid)}")
+    if isinstance(maxrec, bool) or not isinstance(maxrec, int) or maxrec < 1:
+        raise ValueError("maxrec must be a positive integer")
+
+    position = validate_sky_query(ra_deg, dec_deg, radius_arcsec)
+    params: list[tuple[str, str]] = [
+        ("POS", f"CIRCLE {position.ra.deg:.10f} {position.dec.deg:.10f} {float(radius_arcsec) / 3600.0:.10f}"),
+        ("MAXREC", str(maxrec)),
+        ("RESPONSEFORMAT", "VOTABLE"),
+    ]
+    params.extend(("COLLECTION", collection) for collection in deduped)
+
+    with _BoundedIrsaSession() as session:
+        response = session.get(
+            f"https://{IRSA_HOST}/SIA",
+            params=params,
+            headers={"Accept": "application/x-votable+xml, application/xml"},
+        )
+        try:
+            response.raise_for_status()
+            return Table.read(BytesIO(response.content), format="votable")
+        finally:
+            response.close()
+
+
+def query_sia(
+    ra_deg: float,
+    dec_deg: float,
+    radius_arcsec: float,
+    collections: list[str],
+    *,
+    maxrec: int = MAX_SIA_RECORDS,
+) -> Table:
+    """Try a direct SIA2 query first, then fall back to Astroquery."""
+    try:
+        return query_sia_direct(
+            ra_deg,
+            dec_deg,
+            radius_arcsec,
+            collections,
+            maxrec=maxrec,
+        )
+    except Exception as direct_error:
+        position = validate_sky_query(ra_deg, dec_deg, radius_arcsec)
+        with irsa_client() as client:
+            try:
+                return client.query_sia(
+                    pos=(position, float(radius_arcsec) * u.arcsec),
+                    collection=list(dict.fromkeys(collections)),
+                    maxrec=maxrec,
+                )
+            except Exception as astroquery_error:
+                raise RuntimeError(
+                    "Direct IRSA SIA2 query and Astroquery fallback both failed: "
+                    f"{type(direct_error).__name__}: {direct_error}; "
+                    f"{type(astroquery_error).__name__}: {astroquery_error}"
+                ) from astroquery_error
+
+
 def search_spherex(
     ra_deg: float,
     dec_deg: float,
@@ -206,10 +281,11 @@ def search_spherex(
     position = validate_sky_query(ra_deg, dec_deg, radius_arcsec)
     radius = float(radius_arcsec) * u.arcsec
 
-    with irsa_client() as client:
-        table = client.query_sia(
-            pos=(position, radius),
-            collection=deduped,
-            maxrec=maxrec,
-        )
+    table = query_sia(
+        ra_deg,
+        dec_deg,
+        radius_arcsec,
+        deduped,
+        maxrec=maxrec,
+    )
     return [normalize_observation(row) for row in table]
