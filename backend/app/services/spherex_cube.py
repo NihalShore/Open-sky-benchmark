@@ -246,13 +246,11 @@ def inspect_cube(
 
     if isinstance(payload, (bytes, bytearray)):
         source: BinaryIO = BytesIO(payload)
-        memmap = False
     else:
         source = payload
         source.seek(0)
-        memmap = True
 
-    with fits.open(source, memmap=memmap, lazy_load_hdus=True) as hdus:
+    with fits.open(source, memmap=False, lazy_load_hdus=True) as hdus:
         by_name = {hdu.name.upper(): hdu for hdu in hdus}
         required = {"IMAGE", "NHITS", "FLAGS", "SPECTRAL_CHANNELS"}
         missing = required - set(by_name)
