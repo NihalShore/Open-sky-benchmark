@@ -54,6 +54,11 @@ jobs:
           scripts = re.findall(r"<script>(.*?)</script>", html, flags=re.DOTALL)
           if not scripts:
               raise SystemExit("No inline frontend script found")
+          ids = set(re.findall(r'\\bid="([^"]+)"', html))
+          selectors = set(re.findall(r'\\$\\(["\\']([^"\\']+)["\\']\\)', scripts[0]))
+          missing = sorted(selectors - ids)
+          if missing:
+              raise SystemExit(f"Missing frontend elements: {missing}")
           Path("/tmp/timelens.js").write_text("\n".join(scripts), encoding="utf-8")
           PY
           node --check /tmp/timelens.js
