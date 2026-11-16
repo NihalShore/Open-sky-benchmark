@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-from astroquery.ipac.irsa import Irsa
+from app.services.irsa_client import new_irsa_client
 
 NEOWISE_CATALOG = "neowiser_p1bs_psd"
 NEOWISE_COLUMNS = (
@@ -97,7 +97,7 @@ def search_neowise(
         f"CIRCLE('ICRS', {ra_deg:.12f}, {dec_deg:.12f}, {radius_deg:.12f})) = 1 "
         "ORDER BY mjd ASC, scan_id ASC, frame_num ASC"
     )
-    table = Irsa.query_tap(query, maxrec=limit + 1)
+    table = new_irsa_client().query_tap(query, maxrec=limit + 1)
     detections = [normalize_detection(row) for row in table]
     detections = [row for row in detections if row["mjd"] is not None]
     detections.sort(
