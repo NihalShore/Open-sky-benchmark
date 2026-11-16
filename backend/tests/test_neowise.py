@@ -41,7 +41,10 @@ def test_search_uses_bounded_tap_query_and_numeric_order(monkeypatch):
         calls["maxrec"] = maxrec
         return rows
 
-    monkeypatch.setattr(neowise.Irsa, "query_tap", fake_query_tap)
+    monkeypatch.setattr(
+        neowise, "new_irsa_client",
+        lambda: type("FakeClient", (), {"query_tap": staticmethod(fake_query_tap)})(),
+    )
     result = neowise.search_neowise(1.0, 2.0, 15, limit=2)
 
     assert "SELECT TOP 3" in calls["query"]
