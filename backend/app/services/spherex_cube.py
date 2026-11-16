@@ -77,12 +77,28 @@ def discover_cube_products(ra_deg: float, dec_deg: float, radius_arcsec: float =
             "collection": _value(row, "obs_collection"),
             "data_product_type": product_type,
             "access_format": access_format,
+            "center_ra_deg": _value(row, "s_ra"),
+            "center_dec_deg": _value(row, "s_dec"),
             "access_url": access_url,
             "source_archive": "NASA/IPAC IRSA",
             "synthetic": False,
         })
     if not products and rejected_urls:
         raise CubeDataError("IRSA returned cube records with untrusted access URLs")
+
+    def distance(product: dict[str, Any]) -> float:
+        try:
+            center = SkyCoord(
+                ra=float(product["center_ra_deg"]),
+                dec=float(product["center_dec_deg"]),
+                unit="deg",
+                frame="icrs",
+            )
+            return float(position.separation(center).arcsec)
+        except (TypeError, ValueError, KeyError):
+            return float("inf")
+
+    products.sort(key=distance)
     return products
 
 
