@@ -22,7 +22,7 @@ python -m uvicorn app.main:app --reload --port 8000
 
 API documentation: http://127.0.0.1:8000/docs
 
-The browser frontend calls this service from a separate Vercel project. CORS allows the TimeLens production hostname, matching Vercel preview hostnames and local development by default. Set TIMELENS_CORS_ORIGINS to a comma-separated allowlist when deploying elsewhere.
+The browser frontend calls this service from a separate Vercel project. CORS allows the production frontend and local development origins by default. Add each required Vercel preview origin explicitly through TIMELENS_CORS_ORIGINS; arbitrary Vercel projects are not trusted.
 
 ## HTTP endpoints
 
@@ -55,7 +55,7 @@ Coordinates are ICRS degrees. Right ascension must be in [0, 360), declination i
 
 `GET /api/v1/cube/preview?ra_deg=...&dec_deg=...&channel_index=0` retrieves a bounded FITS product from the official IRSA HTTPS host, validates the required extensions, extracts one channel, applies the `NHITS > 0` coverage mask, and returns a display-only PNG.
 
-The zero-based channel index is 0–101. Response headers include source, channel number, wavelength when available, coverage fraction, units, and a synthetic-data flag. The preview is not a calibrated photometry product. The code reads the FITS `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS` extensions; it does not use HiPS PNGs as science input.
+The zero-based channel index is 0–101. Response headers include source, observation ID, channel number, wavelength when available, coverage fraction, units, and a synthetic-data flag. The preview is a sky-centered cutout, not the full tile. The preview is not a calibrated photometry product. The code reads the FITS `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS` extensions; it does not use HiPS PNGs as science input.
 
 A small inspection utility is available:
 
