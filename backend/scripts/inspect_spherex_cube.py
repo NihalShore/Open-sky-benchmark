@@ -32,11 +32,16 @@ def _header_summary(header: fits.Header) -> dict[str, Any]:
 
 def _celestial_sample(header: fits.Header) -> dict[str, Any]:
     try:
-        wcs = WCS(header).celestial
-        width = header.get("NAXIS1")
-        height = header.get("NAXIS2")
-        if not wcs.has_celestial or not width or not height:
-            return {"available": False, "reason": "No usable celestial WCS found"}
+        full_wcs = WCS(header)
+        wcs = full_wcs.celestial
+        pixel_shape = wcs.pixel_shape
+        if pixel_shape is None and full_wcs.pixel_n_dim == 2:
+            pixel_shape = (header.get("NAXIS1"), header.get("NAXIS2"))
+        if not wcs.has_celestial or not pixel_shape or len(pixel_shape) != 2:
+            return {"available": False, "reason": "No usable celestial WCS pixel shape found"}
+        width, height = pixel_shape
+        if not width or not height:
+            return {"available": False, "reason": "Celestial WCS dimensions are unavailable"}
 
         pixels = {
             "center": ((width - 1) / 2, (height - 1) / 2),
