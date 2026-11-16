@@ -28,7 +28,7 @@
 <div class="hero-foot"><button class="btn" onclick="document.querySelector('#workspace').scrollIntoView({behavior:'smooth'})">Open the explorer ↗</button><small>SPHEREx · 0.75–5.0 μm · 102 FITS channels</small></div>
 <div class="target-kicker" style="margin-top:34px">Challenge benchmark fields · live archive lookup</div>
 <div class="target-grid" id="target-launchpad">
-<article class="target-card"><strong>Barnard’s Star</strong><small>269.4521° · +4.6934°</small><button class="btn secondary" data-target="barnards-star">Play Barnard’s Star ↗</button></article>
+<article class="target-card"><strong>Barnard’s Star</strong><small>269.4521° · +4.6934°</small><button class="btn secondary" data-target="barnards-star">Explore Barnard’s Star ↗</button></article>
 <article class="target-card"><strong>Epsilon Indi B</strong><small>331.0441° · −56.7828°</small><button class="btn secondary" data-target="epsilon-indi-b">Open Epsilon Indi B ↗</button></article>
 <article class="target-card"><strong>WISE 0855</strong><small>133.8189° · −7.2470°</small><button class="btn secondary" data-target="wise-0855">Open WISE 0855 ↗</button></article>
 <article class="target-card"><strong>RW Aurigae</strong><small>76.9565° · +30.4014°</small><button class="btn secondary" data-target="rw-aurigae">Open RW Aurigae ↗</button></article>
@@ -130,7 +130,7 @@ async function searchNeowise(){if(!query)return;$("neowise-search").disabled=tru
 const TARGETS={"barnards-star":{ra:269.4521,dec:4.6934},"epsilon-indi-b":{ra:331.0441,dec:-56.7828},"wise-0855":{ra:133.8189,dec:-7.2470},"rw-aurigae":{ra:76.9565,dec:30.4014},"r-draconis":{ra:248.1676,dec:66.7550}};
 function launchTarget(key){const t=TARGETS[key];if(!t)return;$("ra").value=t.ra;$("dec").value=t.dec;$("radius").value=120;const url=new URL(location.href);url.searchParams.set("target",key);history.replaceState(null,"",url);$("workspace").scrollIntoView({behavior:"smooth"});searchArchive();}
 document.querySelectorAll("[data-target]").forEach(button=>button.addEventListener("click",()=>launchTarget(button.dataset.target)));
-const requestedTarget=new URLSearchParams(location.search).get("target");if(requestedTarget&&TARGETS[requestedTarget]){const t=TARGETS[requestedTarget];$("ra").value=t.ra;$("dec").value=t.dec;$("radius").value=120;}
+const requestedTarget=new URLSearchParams(location.search).get("target");if(requestedTarget&&TARGETS[requestedTarget]){const t=TARGETS[requestedTarget];$("ra").value=t.ra;$("dec").value=t.dec;$("radius").value=120;searchArchive();}
 $("search").addEventListener("click",searchArchive);$("channel").addEventListener("change",loadChannel);$("load-channel").addEventListener("click",loadChannel);$("neowise-search").addEventListener("click",searchNeowise);["ra","dec","radius"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")searchArchive();}));
 api("/api/v1/health").then(r=>r.json()).then(()=>{$("service-state").classList.add("ok");$("service-state").querySelector("span").textContent="API ONLINE";$("viewer-status").textContent="READY FOR ARCHIVE QUERY";}).catch(()=>{$("service-state").classList.add("fail");$("service-state").querySelector("span").textContent="API OFFLINE";$("archive-details").textContent="API health check failed. No live archive data is available.";notice("error","API NOT CONNECTED","The TimeLens API did not respond. The viewer will not display simulated data.");});
 })();
