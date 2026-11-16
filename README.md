@@ -1,34 +1,67 @@
-# Open-sky-benchmark
-NASA Space Apps 2026 | Planet X &amp; SPHEREx – Open tool to benchmark and detect moving objects in all-sky survey images
+# SPHEREx TimeLens
 
-## SPHEREx TimeLens
+NASA Space Apps 2026 — Planet X & SPHEREx
 
-Pick a sky position, pull every SPHEREx spectral-image cutout that covers it from IRSA, align them, and
-compare epochs. All pixels come from IRSA (TAP `spherex.artifact` / `spherex.plane`); nothing is simulated.
+Backend for inspecting real SPHEREx and NEOWISE archive data.
+TimeLens helps explore observations across position, time, and wavelength.
+It does not claim to detect or confirm Planet X.
 
-Panels: sky view (click to re-centre), observation timeline, A/B blink comparator, spectral lab
-(aperture flux vs wavelength), evidence table (provenance, masked fraction, unmatched detections).
+## What works
 
-### Run
+FastAPI backend on this tree:
 
+- IRSA SIA2 discovery for SPHEREx spectral images (DR1 / QR3)
+- DR1 All-Sky Cube tile search, FITS channel extraction, coverage-masked PNG preview
+- NEOWISE-R single-exposure source search (MJD-ordered, quality fields kept)
+- WCS reprojection of a target image onto a reference grid (bilinear)
+- Coverage-aware difference imaging on aligned planes
+- End-to-end path: reproject → coverage mask → common-valid mask → residual candidates
+
+All science pixels come from IRSA. Live paths do not invent data.
+
+## What does not work yet
+
+- No public frontend / blink UI / spectral lab panels
+- No PSF matching or photometric scaling between epochs
+- No uncertainty-map propagation
+- No moving-object classifier
+- Live IRSA downloads are rate-limited and not guaranteed in every environment
+
+## Run
+
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
 ```
-cd backend && pip install -r requirements.txt && uvicorn app.main:app --port 8000
-cd frontend && npm install && npm run dev        # http://localhost:5173, proxies /api to :8000
+
+API docs: http://127.0.0.1:8000/docs  
+Health: http://127.0.0.1:8000/api/v1/health
+
+## Tests
+
+```bash
+cd backend && pytest -q
 ```
 
-Deploy: `npm run build` in `frontend/`, then run only uvicorn; it serves `frontend/dist`.
+GitHub Actions runs the same suite on pull requests and `feat/**` pushes.
 
-### Tests
+## Scientific rules
 
-```
-cd backend && pytest
-cd frontend && npm test
-```
+- Preserve original archive products and record provenance
+- Inspect multi-extension FITS; do not assume the primary HDU is science data
+- Respect spatial and wavelength-dependent WCS
+- Compare only compatible data; mask missing coverage explicitly
+- Treat residuals as investigation candidates, not discoveries
+- Label synthetic fixtures clearly; never present them as NASA observations
 
-### Limits
+## Official data sources
 
-- First query for a position is slow (TAP + cutout downloads, tens of seconds); results are cached in memory.
-- Frames sit at different wavelengths (the SPHEREx filter varies across the detector), so A/B differences are not
-  automatically motion. The evidence panel says so when it applies.
-- Any non-zero FLAGS bit is masked; refine per the SPHEREx Explanatory Supplement.
-- No Gaia/WISE cross-match yet.
+- [IRSA SPHEREx Data Access](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/)
+- [SPHEREx Data Releases](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-releases/)
+- [IRSA SPHEREx spectral-image tutorial](https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/)
+
+## License
+
+MIT
