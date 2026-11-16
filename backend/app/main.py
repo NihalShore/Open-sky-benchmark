@@ -134,9 +134,10 @@ async def search_neowise_sources(
 ) -> dict:
     """Return dated NEOWISE-R single-exposure source measurements."""
     try:
-        detections = await run_in_threadpool(
+        result = await run_in_threadpool(
             search_neowise, ra_deg, dec_deg, radius_arcsec, limit
         )
+        detections = result["detections"]
     except Exception as exc:
         logger.exception("NEOWISE single-exposure search failed")
         raise HTTPException(status_code=502, detail="IRSA NEOWISE search failed; retry later") from exc
@@ -153,6 +154,7 @@ async def search_neowise_sources(
         },
         "result_count": len(detections),
         "detections": detections,
+        "truncated": result["truncated"],
         "time_field": "mjd",
         "bands": ["W1", "W2"],
         "notice": (
