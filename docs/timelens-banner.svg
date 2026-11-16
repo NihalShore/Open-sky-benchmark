@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="420" viewBox="0 0 1600 420" role="img" aria-labelledby="title desc">
+  <title id="title">SPHEREx TimeLens</title>
+  <desc id="desc">A dark astronomical banner with a stylized infrared spectrum and orbital curves.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#07111f"/><stop offset=".55" stop-color="#101f3a"/><stop offset="1" stop-color="#18284b"/></linearGradient>
+    <linearGradient id="spectrum" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#34d399" stop-opacity=".08"/><stop offset=".35" stop-color="#22d3ee" stop-opacity=".9"/><stop offset=".68" stop-color="#818cf8" stop-opacity=".95"/><stop offset="1" stop-color="#e879f9" stop-opacity=".08"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#38bdf8" stop-opacity=".22"/><stop offset="1" stop-color="#38bdf8" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1600" height="420" rx="28" fill="url(#bg)"/>
+  <circle cx="1265" cy="190" r="270" fill="url(#glow)"/>
+  <g stroke="#7dd3fc" stroke-opacity=".17" fill="none"><ellipse cx="1265" cy="205" rx="330" ry="105" transform="rotate(-18 1265 205)" stroke-width="2"/><ellipse cx="1265" cy="205" rx="270" ry="170" transform="rotate(22 1265 205)" stroke-width="1.5"/><ellipse cx="1265" cy="205" rx="210" ry="240" transform="rotate(55 1265 205)" stroke-width="1"/></g>
+  <g fill="#e0f2fe"><circle cx="1010" cy="74" r="2.3"/><circle cx="1148" cy="325" r="1.8"/><circle cx="1380" cy="90" r="2.2"/><circle cx="1490" cy="250" r="1.6"/><circle cx="950" cy="258" r="1.5"/><circle cx="1320" cy="355" r="2"/><circle cx="1450" cy="145" r="1.2"/><circle cx="1084" cy="150" r="1.4"/><circle cx="1200" cy="42" r="1.4"/></g>
+  <circle cx="1265" cy="205" r="54" fill="#07111f" stroke="#67e8f9" stroke-width="2" stroke-opacity=".8"/>
+  <circle cx="1265" cy="205" r="37" fill="#0e7490" fill-opacity=".22"/>
+  <path d="M1228 205h74M1265 168v74M1239 179l52 52M1291 179l-52 52" stroke="#a5f3fc" stroke-opacity=".35"/>
+  <path d="M80 315 C220 300 275 338 390 312 S570 285 670 309 S820 340 950 306" stroke="url(#spectrum)" stroke-width="3" fill="none"/>
+  <path d="M80 330 C230 310 300 350 420 328 S620 292 740 322 S860 350 950 322" stroke="#38bdf8" stroke-opacity=".18" stroke-width="1" fill="none"/>
+  <g font-family="Inter,Segoe UI,Arial,sans-serif">
+    <text x="88" y="92" fill="#67e8f9" font-size="16" font-weight="700" letter-spacing="4">OPEN ASTRONOMY DATA · REPRODUCIBLE ANALYSIS</text>
+    <text x="82" y="186" fill="#f8fafc" font-size="68" font-weight="750" letter-spacing="-2">SPHEREx TimeLens</text>
+    <text x="88" y="238" fill="#cbd5e1" font-size="27">Explore the infrared sky across position, wavelength, and time.</text>
+    <text x="88" y="380" fill="#94a3b8" font-size="14" font-weight="600" letter-spacing="2">NASA SPACE APPS CHALLENGE 2026 · API-FIRST RESEARCH PROTOTYPE</text>
+  </g>
+</svg>
