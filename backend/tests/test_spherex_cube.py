@@ -183,3 +183,58 @@ def test_inspect_cube_returns_coordinate_centered_cutout():
     assert plane.shape[1] < 8
     assert metadata["cutout_center_icrs"] == {"ra_deg": 120.0, "dec_deg": 30.0}
     assert metadata["cutout_radius_arcsec"] == 10
+
+
+
+def test_discovery_filters_products_and_selects_nearest_tile(monkeypatch):
+    from app.services import spherex_cube
+
+    rows = [
+        {
+            "access_url": "https://irsa.ipac.caltech.edu/far.fits",
+            "access_format": "application/fits",
+            "dataproduct_type": "cube",
+            "obs_id": "far",
+            "s_ra": 120.01,
+            "s_dec": 30.0,
+        },
+        {
+            "access_url": "https://irsa.ipac.caltech.edu/near.fits",
+            "access_format": "application/fits",
+            "dataproduct_type": "cube",
+            "obs_id": "near",
+            "s_ra": 120.001,
+            "s_dec": 30.0,
+        },
+        {
+            "access_url": "https://irsa.ipac.caltech.edu/image.png",
+            "access_format": "image/png",
+            "dataproduct_type": "image",
+            "obs_id": "not-a-cube",
+        },
+    ]
+
+    class FakeClient:
+        def query_sia(self, **kwargs):
+            return rows
+
+    monkeypatch.setattr(spherex_cube, "new_irsa_client", lambda: FakeClient())
+    products = spherex_cube.discover_cube_products(120.0, 30.0, 30)
+
+    assert [product["observation_id"] for product in products] == ["near", "far"]
+
+
+def test_discovery_reports_rejected_archive_urls(monkeypatch):
+    from app.services import spherex_cube
+
+    class FakeClient:
+        def query_sia(self, **kwargs):
+            return [{
+                "access_url": "https://example.com/cube.fits",
+                "access_format": "application/fits",
+                "dataproduct_type": "cube",
+            }]
+
+    monkeypatch.setattr(spherex_cube, "new_irsa_client", lambda: FakeClient())
+    with pytest.raises(CubeDataError, match="untrusted"):
+        spherex_cube.discover_cube_products(120.0, 30.0, 30)
