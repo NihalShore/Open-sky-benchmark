@@ -43,8 +43,7 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
 | **SPHEREx discovery** | IRSA SIA2 searches for DR1 / QR3 spectral-image metadata |
 | **SPHEREx DR1 cube** | Tile discovery, bounded FITS retrieval, channel extraction, coverage-masked PNG preview |
 | **NEOWISE-R** | Single-exposure source measurements ordered by Modified Julian Date, with quality fields retained |
-| **WCS registration** | Bilinear reprojection of a target image onto a reference celestial grid |
-| **Difference analysis** | Common-coverage masking and robust residual ranking using median absolute deviation |
+| **Python analysis primitives** | WCS reprojection and robust residual helpers are available as library code; they are not exposed through the HTTP API yet |
 
 <p align="center">
   <img src="docs/architecture.svg" alt="TimeLens system architecture" width="100%">
@@ -62,11 +61,11 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
 | SPHEREx SIA2 and DR1 cube discovery | PSF matching or photometric scaling across epochs |
 | NEOWISE-R single-exposure query | Uncertainty-map propagation |
 | FITS channel preview with coverage masking | Automated moving-object classification or Planet X detection |
-| WCS reprojection and difference primitives | Verified live end-to-end science result or hosted deployment |
+| WCS reprojection and difference primitives (Python library only) | Verified live end-to-end science result or hosted deployment |
 
 ## Quick start
 
-The frontend and API are separate Vercel projects. The frontend uses the web directory; the FastAPI service uses the backend directory. The browser API base is open-sky-timelens-api.vercel.app.
+The public interactive explorer is in `web/index.html` and calls the live archive API; it does not fabricate sky images or science statistics. The frontend and API are separate Vercel projects. The FastAPI service uses the `backend/` directory, and the browser API base is `open-sky-timelens-api.vercel.app`.
 
 
 **Requirements:** Python 3.11 recommended. Install and run from the `backend/` directory.
