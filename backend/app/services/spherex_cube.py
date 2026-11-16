@@ -21,7 +21,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from PIL import Image
 
-from app.services.irsa import _trusted_access_url, irsa_client, validate_sky_query
+from app.services.irsa import _trusted_access_url, query_sia, validate_sky_query
 
 IRSA_HOST = "irsa.ipac.caltech.edu"
 CUBE_COLLECTION = "spherex_dr1_cube"
@@ -78,12 +78,13 @@ def _is_fits_cube_row(data_product_type: Any, access_format: Any) -> bool:
 def discover_cube_products(ra_deg: float, dec_deg: float, radius_arcsec: float = 30) -> list[dict[str, Any]]:
     """Find DR1 All-Sky Cube tiles overlapping an ICRS position."""
     position = validate_sky_query(ra_deg, dec_deg, radius_arcsec)
-    with irsa_client() as client:
-        table = client.query_sia(
-            pos=(position, float(radius_arcsec) * u.arcsec),
-            collection=CUBE_COLLECTION,
-            maxrec=100,
-        )
+    table = query_sia(
+        ra_deg,
+        dec_deg,
+        radius_arcsec,
+        [CUBE_COLLECTION],
+        maxrec=100,
+    )
 
     products: list[tuple[float, dict[str, Any]]] = []
     candidate_rows = 0
