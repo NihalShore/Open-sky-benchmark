@@ -3,6 +3,7 @@ from io import BytesIO
 import numpy as np
 import pytest
 from astropy.io import fits
+from astropy.wcs import WCS
 
 from app.services.spherex_cube import (
     CubeDataError,
