@@ -60,10 +60,16 @@ def discover_cube_products(ra_deg: float, dec_deg: float, radius_arcsec: float =
     if not np.isfinite(radius_arcsec) or not 0 < radius_arcsec <= 1800:
         raise ValueError("radius_arcsec must be in (0, 1800]")
     position = SkyCoord(ra=ra_deg, dec=dec_deg, unit="deg", frame="icrs")
-    table = new_irsa_client().query_sia(
-        pos=(position, radius_arcsec * u.arcsec),
-        collection=CUBE_COLLECTION,
-    )
+    client = new_irsa_client()
+    try:
+        table = client.query_sia(
+            pos=(position, radius_arcsec * u.arcsec),
+            collection=CUBE_COLLECTION,
+        )
+    finally:
+        close = getattr(client, "close", None)
+        if callable(close):
+            close()
     products: list[dict[str, Any]] = []
     rejected_urls = 0
     for row in table:
