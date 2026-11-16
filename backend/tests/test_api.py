@@ -139,3 +139,21 @@ def test_neowise_search_validates_limit():
     )
 
     assert response.status_code == 422
+
+
+def test_cors_allows_production_frontend_and_exposes_fits_headers():
+    response = client.get("/api/v1/health", headers={"Origin": "https://open-sky-timelens.vercel.app"})
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://open-sky-timelens.vercel.app"
+    exposed = response.headers["access-control-expose-headers"].lower()
+    assert "x-spherex-wavelength-um" in exposed
+    assert "x-spherex-flags-nonzero-pixels" in exposed
+
+
+def test_cors_allows_time_lens_preview_origin():
+    response = client.options(
+        "/api/v1/health",
+        headers={"Origin": "https://open-sky-timelens-git-feature-achme-63b5.vercel.app", "Access-Control-Request-Method": "GET"},
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"].startswith("https://open-sky-timelens-")

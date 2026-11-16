@@ -52,19 +52,22 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
 
 ## Project status
 
-> **Research prototype · Backend/API only · No public frontend**
+> **Research prototype · Public archive explorer + FastAPI service**
 >
 > Archive queries depend on IRSA availability and may be rate-limited. Automated tests use generated FITS fixtures and mocked archive responses; they do not prove that every live archive request will succeed.
 
 | Available now | Not implemented or not yet validated |
 |---|---|
-| Coordinate-validated FastAPI endpoints | Public web interface, blink viewer, or spectral-lab UI |
+| Coordinate-validated FastAPI endpoints | Calibrated multi-epoch comparison with PSF matching and uncertainty propagation |
 | SPHEREx SIA2 and DR1 cube discovery | PSF matching or photometric scaling across epochs |
 | NEOWISE-R single-exposure query | Uncertainty-map propagation |
-| FITS channel preview with coverage masking | Automated moving-object classification |
+| FITS channel preview with coverage masking | Automated moving-object classification or Planet X detection |
 | WCS reprojection and difference primitives | Verified live end-to-end science result or hosted deployment |
 
 ## Quick start
+
+The frontend and API are separate Vercel projects. The frontend uses the web directory; the FastAPI service uses the backend directory. The browser API base is open-sky-timelens-api.vercel.app.
+
 
 **Requirements:** Python 3.11 recommended. Install and run from the `backend/` directory.
 
@@ -145,6 +148,13 @@ python -m pytest -q
 ```
 
 GitHub Actions is configured to run the backend test suite on relevant pushes and pull requests. The tests use generated FITS fixtures and mocked remote archive calls; live IRSA access remains an external dependency.
+
+## Deployment layout
+
+- Frontend: Vercel project open-sky-timelens, root directory web.
+- API: Vercel project open-sky-timelens-api, root directory backend.
+- CORS: TIMELENS_CORS_ORIGINS overrides the default production, preview and local origins.
+- Python: API runtime pinned in backend/.python-version.
 
 ## Scientific integrity
 

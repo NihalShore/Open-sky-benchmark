@@ -1,6 +1,6 @@
 # TimeLens backend
 
-The backend is a FastAPI service plus reusable astronomy/image-analysis modules. Run all commands in this guide from the `backend/` directory.
+The backend is a FastAPI service plus reusable astronomy/image-analysis modules. The index.py file is the Vercel entrypoint and imports the same app.main:app used locally. Run all commands in this guide from the `backend/` directory.
 
 ## Requirements and local run
 
@@ -21,6 +21,8 @@ python -m uvicorn app.main:app --reload --port 8000
 ```
 
 API documentation: http://127.0.0.1:8000/docs
+
+The browser frontend calls this service from a separate Vercel project. CORS allows the TimeLens production hostname, matching Vercel preview hostnames and local development by default. Set TIMELENS_CORS_ORIGINS to a comma-separated allowlist when deploying elsewhere.
 
 ## HTTP endpoints
 
@@ -118,3 +120,10 @@ Tests use generated FITS fixtures and mocked IRSA calls. They do not require liv
 - [SPHEREx data releases](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-releases/)
 - [IRSA SPHEREx spectral-image tutorial](https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/)
 - [SPHEREx data products](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-products/)
+
+
+## Vercel deployment
+
+Deploy this directory as a separate Vercel project with backend as its root directory. Vercel detects the FastAPI application through the top-level index.py entrypoint. Python is pinned to 3.13. No build command or output directory is required.
+
+GET /api/v1/health is a process check only; it does not query IRSA. Test SIA2 discovery and FITS retrieval separately.

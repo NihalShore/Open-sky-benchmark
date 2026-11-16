@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Literal
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
@@ -28,7 +30,32 @@ app = FastAPI(
         "Science-first discovery and exploration of public SPHEREx observations. "
         "Archive-backed products are distinguished from test fixtures and previews."
     ),
-    version="0.2.0",
+    version="0.3.0",
+)
+
+_default_origins = [
+    "https://open-sky-timelens.vercel.app",
+    "https://open-sky-timelens-achme-63b5.vercel.app",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("TIMELENS_CORS_ORIGINS", ",".join(_default_origins)).split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_origin_regex=r"https://open-sky-timelens(?:-[a-z0-9-]+)?\.vercel\.app",
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
+    expose_headers=[
+        "X-SPHEREX-Source", "X-SPHEREX-Product", "X-SPHEREX-Channel",
+        "X-SPHEREX-Coverage-Fraction", "X-SPHEREX-Units", "X-SPHEREX-Synthetic",
+        "X-SPHEREX-Wavelength-Um", "X-SPHEREX-Flags-Nonzero-Pixels",
+    ],
+    max_age=600,
 )
 
 
@@ -194,6 +221,7 @@ async def cube_preview(
         "X-SPHEREX-Channel": str(metadata["channel_number"]),
         "X-SPHEREX-Coverage-Fraction": str(metadata["coverage_fraction"]),
         "X-SPHEREX-Units": str(metadata["units"]),
+        "X-SPHEREX-Flags-Nonzero-Pixels": str(metadata.get("flags_nonzero_pixel_count", 0)),
         "X-SPHEREX-Synthetic": "false",
         "Cache-Control": "no-store",
     }
