@@ -202,7 +202,7 @@ def query_sia_direct(
 
     position = validate_sky_query(ra_deg, dec_deg, radius_arcsec)
     params: list[tuple[str, str]] = [
-        ("POS", f"CIRCLE {position.ra.deg:.10f} {position.dec.deg:.10f} {float(radius_arcsec) / 3600.0:.10f}"),
+        ("POS", f"circle {position.ra.deg:.10f} {position.dec.deg:.10f} {float(radius_arcsec) / 3600.0:.10f}"),
         ("MAXREC", str(maxrec)),
         ("RESPONSEFORMAT", "VOTABLE"),
     ]
