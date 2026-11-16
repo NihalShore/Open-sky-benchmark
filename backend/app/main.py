@@ -82,7 +82,7 @@ class SearchRequest(BaseModel):
 
 def _safe_header_value(value: object, max_length: int = 128) -> str:
     """Keep archive metadata safe for HTTP response headers."""
-    text = str(value).replace("\\r", " ").replace("\\n", " ")
+    text = str(value).replace("\r", " ").replace("\n", " ")
     return text.encode("ascii", errors="ignore").decode("ascii")[:max_length] or "unknown"
 
 
