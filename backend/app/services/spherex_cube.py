@@ -162,7 +162,7 @@ def _channel_axis(
                     wcs.axis_correlation_matrix[spectral_world_axes[0]]
                 )
                 if len(pixel_axes) == 1:
-                    numpy_axis = image.ndim - 1 - int(pixel_axes[0])
+                    numpy_axis = len(image_shape) - 1 - int(pixel_axes[0])
                     if 0 <= numpy_axis < len(image_shape) and image_shape[numpy_axis] == channel_count:
                         return numpy_axis
         except Exception:
@@ -247,9 +247,11 @@ def inspect_cube(payload: bytes | BinaryIO, channel_index: int) -> tuple[dict[st
         plane_shape = tuple(size for index, size in enumerate(image_shape) if index != axis)
         pixels = int(np.prod(plane_shape, dtype=np.int64))
         bitpix_bytes = {8: 1, 16: 2, 32: 4, 64: 8, -32: 4, -64: 8}
-        plane_bytes = pixels * sum(
-            bitpix_bytes.get(int(hdu.header.get("BITPIX", -32)), 8)
-            for hdu in (image_hdu, nhits_hdu, flags_hdu)
+        plane_bytes = pixels * (
+            sum(
+                bitpix_bytes.get(int(hdu.header.get("BITPIX", -32)), 8)
+                for hdu in (image_hdu, nhits_hdu, flags_hdu)
+            ) + 8
         )
         if plane_bytes > MAX_CUBE_PLANE_BYTES:
             raise CubeDataError("Selected cube plane exceeds the configured memory limit")
