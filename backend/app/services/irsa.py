@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 import astropy.units as u
 import numpy as np
 from astropy.coordinates import SkyCoord
-from astroquery.ipac.irsa import Irsa
+from app.services.irsa_client import new_irsa_client
 
 ALLOWED_COLLECTIONS = {
     "spherex_dr1",
@@ -117,7 +117,7 @@ def search_spherex(
     position = SkyCoord(ra=ra_deg, dec=dec_deg, unit="deg", frame="icrs")
     radius = radius_arcsec * u.arcsec
 
-    table = Irsa.query_sia(
+    table = new_irsa_client().query_sia(
         pos=(position, radius),
         collection=collections,
     )
