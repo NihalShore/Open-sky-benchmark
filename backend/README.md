@@ -1,6 +1,6 @@
 # TimeLens backend
 
-The backend is a FastAPI service plus reusable astronomy/image-analysis modules. The index.py file is the Vercel entrypoint and imports the same app.main:app used locally. Run all commands in this guide from the `backend/` directory.
+The backend is a FastAPI service plus reusable astronomy/image-analysis modules. IRSA SIA2 and TAP access use PyVO with isolated, timed HTTP sessions. The index.py file is the Vercel entrypoint and imports the same app.main:app used locally. Run all commands in this guide from the `backend/` directory.
 
 ## Requirements and local run
 
