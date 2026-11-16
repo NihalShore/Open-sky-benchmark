@@ -209,7 +209,7 @@ async def cube_preview(
     except HTTPException:
         raise
     except CubeDataError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("SPHEREx cube preview failed")
         raise HTTPException(status_code=502, detail="Could not retrieve or inspect the cube; retry later") from exc
