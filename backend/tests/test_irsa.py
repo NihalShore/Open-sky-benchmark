@@ -1,7 +1,8 @@
-from contextlib import contextmanager
+from io import BytesIO
 
 import pytest
 import requests
+from astropy.table import Table
 
 from app.services import irsa
 
@@ -47,32 +48,62 @@ def test_validate_sky_query_rejects_out_of_bounds_inputs(ra, dec, radius):
         irsa.validate_sky_query(ra, dec, radius)
 
 
+def test_query_sia_direct_uses_documented_endpoint_and_votable(monkeypatch):
+    votable = Table({"obs_id": ["OBS-1"]})
+    payload = BytesIO()
+    votable.write(payload, format="votable")
+    response = requests.Response()
+    response.status_code = 200
+    response.url = "https://irsa.ipac.caltech.edu/SIA"
+    response._content = payload.getvalue()
+    response._content_consumed = True
+    calls = []
+
+    def fake_get(session, url, **kwargs):
+        calls.append((url, kwargs))
+        return response
+
+    monkeypatch.setattr(irsa._BoundedIrsaSession, "get", fake_get)
+    result = irsa.query_sia_direct(
+        127.6,
+        -39.1,
+        36.0,
+        ["spherex_dr1", "spherex_qr3", "spherex_dr1"],
+        maxrec=25,
+    )
+
+    assert list(result["obs_id"]) == ["OBS-1"]
+    assert len(calls) == 1
+    assert calls[0][0] == "https://irsa.ipac.caltech.edu/SIA"
+    params = calls[0][1]["params"]
+    assert ("POS", "CIRCLE 127.6000000000 -39.1000000000 0.0100000000") in params
+    assert ("MAXREC", "25") in params
+    assert ("RESPONSEFORMAT", "VOTABLE") in params
+    assert [value for key, value in params if key == "COLLECTION"] == [
+        "spherex_dr1",
+        "spherex_qr3",
+    ]
+
+
 def test_search_spherex_cleans_nul_bytes_deduplicates_and_passes_maxrec(monkeypatch):
     calls = []
 
-    class FakeClient:
-        def query_sia(self, **kwargs):
-            calls.append(kwargs)
-            return [
-                {
-                    "obs_id": b"OBS-1\x00\x00",
-                    "obs_collection": "spherex_dr1",
-                    "s_ra": 127.6,
-                    "s_dec": -39.1,
-                    "access_url": "https://irsa.ipac.caltech.edu/a.fits",
-                },
-            ]
+    def fake_query_sia(ra, dec, radius, collections, *, maxrec):
+        calls.append((ra, dec, radius, collections, maxrec))
+        return [
+            {
+                "obs_id": b"OBS-1\x00\x00",
+                "obs_collection": "spherex_dr1",
+                "s_ra": 127.6,
+                "s_dec": -39.1,
+                "access_url": "https://irsa.ipac.caltech.edu/a.fits",
+            },
+        ]
 
-    @contextmanager
-    def fake_irsa_client():
-        yield FakeClient()
-
-    monkeypatch.setattr(irsa, "irsa_client", fake_irsa_client)
+    monkeypatch.setattr(irsa, "query_sia", fake_query_sia)
     results = irsa.search_spherex(127.6, -39.1, 36.0, ["spherex_dr1", "spherex_dr1"])
 
-    assert len(calls) == 1
-    assert calls[0]["collection"] == ["spherex_dr1"]
-    assert calls[0]["maxrec"] == irsa.MAX_SIA_RECORDS
+    assert calls == [(127.6, -39.1, 36.0, ["spherex_dr1"], irsa.MAX_SIA_RECORDS)]
     assert len(results) == 1
     assert results[0]["observation_id"] == "OBS-1"
 
