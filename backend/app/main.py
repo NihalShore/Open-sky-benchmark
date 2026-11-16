@@ -1,6 +1,7 @@
 """TimeLens API: SPHEREx archive discovery and cube preview."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Literal
@@ -23,6 +24,7 @@ from app.services.spherex_cube import (
 )
 
 logger = logging.getLogger(__name__)
+_CUBE_PREVIEW_LIMIT = asyncio.Semaphore(1)
 
 app = FastAPI(
     title="SPHEREx TimeLens API",
@@ -47,11 +49,11 @@ cors_origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_origin_regex=r"https://open-sky-timelens(?:-[a-z0-9-]+)?\.vercel\.app",
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type"],
     expose_headers=[
         "X-SPHEREX-Source", "X-SPHEREX-Product", "X-SPHEREX-Channel",
+        "X-SPHEREX-Observation-Id",
         "X-SPHEREX-Coverage-Fraction", "X-SPHEREX-Units", "X-SPHEREX-Synthetic",
         "X-SPHEREX-Wavelength-Um", "X-SPHEREX-Flags-Nonzero-Pixels",
     ],
@@ -76,6 +78,12 @@ class SearchRequest(BaseModel):
             "spherex_qr3_deep",
         ]
     ] = Field(default_factory=lambda: ["spherex_dr1", "spherex_qr3"], min_length=1)
+
+
+def _safe_header_value(value: object, max_length: int = 128) -> str:
+    """Keep archive metadata safe for HTTP response headers."""
+    text = str(value).replace("\r", " ").replace("\n", " ")
+    return text.encode("ascii", errors="ignore").decode("ascii")[:max_length] or "unknown"
 
 
 @app.get("/api/v1/health")
@@ -135,9 +143,10 @@ async def search_neowise_sources(
 ) -> dict:
     """Return dated NEOWISE-R single-exposure source measurements."""
     try:
-        detections = await run_in_threadpool(
+        result = await run_in_threadpool(
             search_neowise, ra_deg, dec_deg, radius_arcsec, limit
         )
+        detections = result["detections"]
     except Exception as exc:
         logger.exception("NEOWISE single-exposure search failed")
         raise HTTPException(status_code=502, detail="IRSA NEOWISE search failed; retry later") from exc
@@ -154,6 +163,7 @@ async def search_neowise_sources(
         },
         "result_count": len(detections),
         "detections": detections,
+        "truncated": result["truncated"],
         "time_field": "mjd",
         "bands": ["W1", "W2"],
         "notice": (
@@ -199,28 +209,47 @@ async def cube_preview(
 ) -> Response:
     """Return a display-only PNG made from a real DR1 FITS cube channel."""
     try:
+        await asyncio.wait_for(_CUBE_PREVIEW_LIMIT.acquire(), timeout=0.05)
+    except TimeoutError as exc:
+        raise HTTPException(status_code=503, detail="Cube preview is busy; retry shortly") from exc
+
+    payload = None
+    try:
         products = await run_in_threadpool(
             discover_cube_products, ra_deg, dec_deg, radius_arcsec
         )
         if not products:
             raise HTTPException(status_code=404, detail="No DR1 cube tile covers this position")
         payload = await run_in_threadpool(download_cube, products[0]["access_url"])
-        metadata, plane = await run_in_threadpool(inspect_cube, payload, channel_index)
+        metadata, plane = await run_in_threadpool(
+            inspect_cube,
+            payload,
+            channel_index,
+            ra_deg=ra_deg,
+            dec_deg=dec_deg,
+            radius_arcsec=radius_arcsec,
+        )
+        metadata["observation_id"] = products[0].get("observation_id")
         png = await run_in_threadpool(render_preview_png, plane)
     except HTTPException:
         raise
     except CubeDataError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("SPHEREx cube preview failed")
         raise HTTPException(status_code=502, detail="Could not retrieve or inspect the cube; retry later") from exc
+    finally:
+        if hasattr(payload, "close"):
+            payload.close()
+        _CUBE_PREVIEW_LIMIT.release()
 
     headers = {
         "X-SPHEREX-Source": "NASA/IPAC IRSA",
         "X-SPHEREX-Product": "DR1 All-Sky Cube",
         "X-SPHEREX-Channel": str(metadata["channel_number"]),
         "X-SPHEREX-Coverage-Fraction": str(metadata["coverage_fraction"]),
-        "X-SPHEREX-Units": str(metadata["units"]),
+        "X-SPHEREX-Units": _safe_header_value(metadata["units"]),
+        "X-SPHEREX-Observation-Id": _safe_header_value(metadata.get("observation_id") or "unknown"),
         "X-SPHEREX-Flags-Nonzero-Pixels": str(metadata.get("flags_nonzero_pixel_count", 0)),
         "X-SPHEREX-Synthetic": "false",
         "Cache-Control": "no-store",

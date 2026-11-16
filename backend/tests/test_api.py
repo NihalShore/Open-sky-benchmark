@@ -89,7 +89,7 @@ def test_cube_preview_returns_png_and_provenance_headers(monkeypatch):
         {"access_url": "https://irsa.ipac.caltech.edu/example.fits"}
     ])
     monkeypatch.setattr(main, "download_cube", lambda url: b"SIMPLE-fits-fixture")
-    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
+    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel, **kwargs: (metadata, object()))
     monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\x89PNG\r\n\x1a\nfixture")
 
     response = client.get("/api/v1/cube/preview?ra_deg=127.6&dec_deg=-39.1&channel_index=0")
@@ -97,6 +97,7 @@ def test_cube_preview_returns_png_and_provenance_headers(monkeypatch):
     assert response.status_code == 200
     assert response.headers["content-type"] == "image/png"
     assert response.headers["x-spherex-source"] == "NASA/IPAC IRSA"
+    assert response.headers["x-spherex-observation-id"] == "unknown"
     assert response.headers["x-spherex-channel"] == "1"
     assert response.headers["x-spherex-wavelength-um"] == "0.8"
     assert response.headers["x-spherex-synthetic"] == "false"
@@ -117,7 +118,7 @@ def test_neowise_search_returns_time_ordered_archive_measurements(monkeypatch):
 
     def fake_search(ra_deg, dec_deg, radius_arcsec, limit):
         assert (ra_deg, dec_deg, radius_arcsec, limit) == (127.6, -39.1, 15, 25)
-        return fake_detections
+        return {"detections": fake_detections, "truncated": False}
 
     monkeypatch.setattr(main, "search_neowise", fake_search)
     response = client.get(
@@ -128,6 +129,7 @@ def test_neowise_search_returns_time_ordered_archive_measurements(monkeypatch):
     payload = response.json()
     assert payload["catalog"] == "neowiser_p1bs_psd"
     assert payload["time_field"] == "mjd"
+    assert payload["truncated"] is False
     assert payload["bands"] == ["W1", "W2"]
     assert payload["detections"][0]["mjd"] == 59000.0
     assert payload["synthetic"] is False
@@ -150,10 +152,13 @@ def test_cors_allows_production_frontend_and_exposes_fits_headers():
     assert "x-spherex-flags-nonzero-pixels" in exposed
 
 
-def test_cors_allows_time_lens_preview_origin():
+def test_cors_rejects_unlisted_vercel_project_origin():
     response = client.options(
         "/api/v1/health",
-        headers={"Origin": "https://open-sky-timelens-git-feature-achme-63b5.vercel.app", "Access-Control-Request-Method": "GET"},
+        headers={
+            "Origin": "https://open-sky-timelens-untrusted.vercel.app",
+            "Access-Control-Request-Method": "GET",
+        },
     )
-    assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"].startswith("https://open-sky-timelens-")
+    assert response.status_code == 400
+    assert "access-control-allow-origin" not in response.headers

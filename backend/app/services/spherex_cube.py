@@ -7,20 +7,25 @@ not used for scientific measurements.
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Any
+from tempfile import SpooledTemporaryFile
+from typing import Any, BinaryIO
 from urllib.parse import urlparse
 
 import numpy as np
 import requests
 from astropy.coordinates import SkyCoord
+from astropy.nddata import Cutout2D
 from astropy.io import fits
+from astropy.wcs import WCS
 import astropy.units as u
-from astroquery.ipac.irsa import Irsa
+from app.services.irsa_client import new_irsa_client
 from PIL import Image
 
 IRSA_HOST = "irsa.ipac.caltech.edu"
 CUBE_COLLECTION = "spherex_dr1_cube"
 MAX_FITS_BYTES = 300 * 1024 * 1024
+MAX_CUBE_PLANE_BYTES = 96 * 1024 * 1024
+SPOOL_MEMORY_BYTES = 8 * 1024 * 1024
 REQUEST_TIMEOUT = (10, 90)
 
 
@@ -30,40 +35,82 @@ class CubeDataError(RuntimeError):
 
 def trusted_cube_url(value: str) -> str:
     """Accept only HTTPS URLs on the official IRSA host and standard port."""
-    parsed = urlparse(value)
-    if (
-        parsed.scheme != "https"
-        or parsed.hostname != IRSA_HOST
-        or parsed.port not in (None, 443)
-        or parsed.username is not None
-        or parsed.password is not None
-    ):
+    try:
+        parsed = urlparse(value)
+        trusted = (
+            parsed.scheme == "https"
+            and parsed.hostname == IRSA_HOST
+            and parsed.port in (None, 443)
+            and parsed.username is None
+            and parsed.password is None
+        )
+    except (TypeError, ValueError):
+        trusted = False
+    if not trusted:
         raise CubeDataError("Archive returned an untrusted cube URL")
     return value
 
 
 def discover_cube_products(ra_deg: float, dec_deg: float, radius_arcsec: float = 30) -> list[dict[str, Any]]:
     """Find DR1 All-Sky Cube tiles overlapping an ICRS position."""
+    if not np.isfinite(ra_deg) or not 0 <= ra_deg < 360:
+        raise ValueError("ra_deg must be in [0, 360)")
+    if not np.isfinite(dec_deg) or not -90 <= dec_deg <= 90:
+        raise ValueError("dec_deg must be in [-90, 90]")
+    if not np.isfinite(radius_arcsec) or not 0 < radius_arcsec <= 1800:
+        raise ValueError("radius_arcsec must be in (0, 1800]")
     position = SkyCoord(ra=ra_deg, dec=dec_deg, unit="deg", frame="icrs")
-    table = Irsa.query_sia(
-        pos=(position, radius_arcsec * u.arcsec),
-        collection=CUBE_COLLECTION,
-    )
+    client = new_irsa_client()
+    try:
+        table = client.query_sia(
+            pos=(position, radius_arcsec * u.arcsec),
+            collection=CUBE_COLLECTION,
+        )
+    finally:
+        close = getattr(client, "close", None)
+        if callable(close):
+            close()
     products: list[dict[str, Any]] = []
+    rejected_urls = 0
     for row in table:
+        access_format = _value(row, "access_format")
+        product_type = _value(row, "dataproduct_type")
+        if access_format and "fits" not in str(access_format).lower():
+            continue
+        if product_type and str(product_type).lower() != "cube":
+            continue
         try:
             access_url = trusted_cube_url(str(row["access_url"]))
         except (KeyError, TypeError, ValueError, CubeDataError):
+            rejected_urls += 1
             continue
         products.append({
             "observation_id": _value(row, "obs_id"),
             "collection": _value(row, "obs_collection"),
-            "data_product_type": _value(row, "dataproduct_type"),
-            "access_format": _value(row, "access_format"),
+            "data_product_type": product_type,
+            "access_format": access_format,
+            "center_ra_deg": _value(row, "s_ra"),
+            "center_dec_deg": _value(row, "s_dec"),
             "access_url": access_url,
             "source_archive": "NASA/IPAC IRSA",
             "synthetic": False,
         })
+    if not products and rejected_urls:
+        raise CubeDataError("IRSA returned cube records with untrusted access URLs")
+
+    def distance(product: dict[str, Any]) -> float:
+        try:
+            center = SkyCoord(
+                ra=float(product["center_ra_deg"]),
+                dec=float(product["center_dec_deg"]),
+                unit="deg",
+                frame="icrs",
+            )
+            return float(position.separation(center).arcsec)
+        except (TypeError, ValueError, KeyError):
+            return float("inf")
+
+    products.sort(key=distance)
     return products
 
 
@@ -81,41 +128,78 @@ def _value(row: Any, key: str) -> Any:
         return None
 
 
-def download_cube(url: str) -> bytes:
-    """Download one bounded FITS product without following redirects."""
+def download_cube(url: str) -> BinaryIO:
+    """Stream one bounded FITS product to a spooled temporary file."""
     safe_url = trusted_cube_url(url)
-    chunks: list[bytes] = []
+    payload = SpooledTemporaryFile(max_size=SPOOL_MEMORY_BYTES, mode="w+b")
     total = 0
-    with requests.get(
-        safe_url,
-        stream=True,
-        timeout=REQUEST_TIMEOUT,
-        allow_redirects=False,
-        headers={"User-Agent": "SPHEREx-TimeLens/0.2"},
-    ) as response:
-        response.raise_for_status()
-        if 300 <= response.status_code < 400:
-            raise CubeDataError("Unexpected redirect from the archive")
-        content_length = response.headers.get("Content-Length")
-        if content_length and int(content_length) > MAX_FITS_BYTES:
-            raise CubeDataError("Cube exceeds the configured download limit")
-        for chunk in response.iter_content(chunk_size=1024 * 1024):
-            if not chunk:
-                continue
-            total += len(chunk)
-            if total > MAX_FITS_BYTES:
-                raise CubeDataError("Cube exceeds the configured download limit")
-            chunks.append(chunk)
-    payload = b"".join(chunks)
-    if not payload.startswith(b"SIMPLE"):
-        raise CubeDataError("Archive response is not a FITS file")
-    return payload
+    try:
+        with requests.get(
+            safe_url,
+            stream=True,
+            timeout=REQUEST_TIMEOUT,
+            allow_redirects=False,
+            headers={"User-Agent": "SPHEREx-TimeLens/0.2"},
+        ) as response:
+            if 300 <= response.status_code < 400:
+                raise CubeDataError("Unexpected redirect from the archive")
+            response.raise_for_status()
+            content_length = response.headers.get("Content-Length")
+            if content_length:
+                try:
+                    declared_size = int(content_length)
+                except (TypeError, ValueError) as exc:
+                    raise CubeDataError("Archive returned an invalid Content-Length") from exc
+                if declared_size < 0 or declared_size > MAX_FITS_BYTES:
+                    raise CubeDataError("Cube exceeds the configured download limit")
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > MAX_FITS_BYTES:
+                    raise CubeDataError("Cube exceeds the configured download limit")
+                payload.write(chunk)
+        payload.seek(0)
+        if payload.read(6) != b"SIMPLE":
+            raise CubeDataError("Archive response is not an uncompressed FITS file")
+        payload.seek(0)
+        return payload
+    except Exception:
+        payload.close()
+        raise
 
 
-def _channel_axis(image: np.ndarray, channel_count: int) -> int:
-    axes = [axis for axis, size in enumerate(image.shape) if size == channel_count]
+def _channel_axis(
+    image: np.ndarray | tuple[int, ...],
+    channel_count: int,
+    header: fits.Header | None = None,
+) -> int:
+    image_shape = image.shape if hasattr(image, "shape") else tuple(image)
+    if header is not None:
+        try:
+            wcs = WCS(header)
+            physical_types = wcs.world_axis_physical_types or []
+            spectral_world_axes = [
+                index for index, physical_type in enumerate(physical_types)
+                if physical_type and (
+                    physical_type.startswith("em.")
+                    or physical_type.startswith("spect.")
+                )
+            ]
+            if len(spectral_world_axes) == 1:
+                pixel_axes = np.flatnonzero(
+                    wcs.axis_correlation_matrix[spectral_world_axes[0]]
+                )
+                if len(pixel_axes) == 1:
+                    numpy_axis = len(image_shape) - 1 - int(pixel_axes[0])
+                    if 0 <= numpy_axis < len(image_shape) and image_shape[numpy_axis] == channel_count:
+                        return numpy_axis
+        except Exception:
+            pass
+
+    axes = [axis for axis, size in enumerate(image_shape) if size == channel_count]
     if len(axes) != 1:
-        raise CubeDataError(f"Cannot identify spectral axis in IMAGE shape {image.shape}")
+        raise CubeDataError(f"Cannot identify spectral axis from FITS WCS or IMAGE shape {image_shape}")
     return axes[0]
 
 
@@ -148,22 +232,44 @@ def _channel_value(row: Any, key: str) -> float | int | None:
         return None
 
 
-def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np.ndarray]:
-    """Validate a DR1 cube and return metadata plus a coverage-masked image plane."""
+def inspect_cube(
+    payload: bytes | BinaryIO,
+    channel_index: int,
+    *,
+    ra_deg: float | None = None,
+    dec_deg: float | None = None,
+    radius_arcsec: float = 30,
+) -> tuple[dict[str, Any], np.ndarray]:
+    """Read one channel from a DR1 cube without materializing the full cube."""
     if channel_index < 0:
         raise CubeDataError("channel_index must be non-negative")
 
-    with fits.open(BytesIO(payload), memmap=False) as hdus:
+    if isinstance(payload, (bytes, bytearray)):
+        source: BinaryIO = BytesIO(payload)
+    else:
+        source = payload
+        source.seek(0)
+
+    with fits.open(source, memmap=False, lazy_load_hdus=True) as hdus:
         by_name = {hdu.name.upper(): hdu for hdu in hdus}
         required = {"IMAGE", "NHITS", "FLAGS", "SPECTRAL_CHANNELS"}
         missing = required - set(by_name)
         if missing:
             raise CubeDataError(f"Cube is missing required extensions: {', '.join(sorted(missing))}")
 
-        image = np.asarray(by_name["IMAGE"].data)
-        nhits = np.asarray(by_name["NHITS"].data)
-        flags = np.asarray(by_name["FLAGS"].data)
+        image_hdu = by_name["IMAGE"]
+        nhits_hdu = by_name["NHITS"]
+        flags_hdu = by_name["FLAGS"]
         channels_hdu = by_name["SPECTRAL_CHANNELS"]
+        if any(isinstance(hdu, fits.CompImageHDU) for hdu in (image_hdu, nhits_hdu, flags_hdu)):
+            raise CubeDataError("Tile-compressed FITS image extensions are not supported")
+
+        image_shape = image_hdu.shape
+        nhits_shape = nhits_hdu.shape
+        flags_shape = flags_hdu.shape
+        if not image_shape or image_shape != nhits_shape or image_shape != flags_shape:
+            raise CubeDataError("IMAGE, NHITS, and FLAGS shapes do not match")
+
         wavelengths = _channel_wavelengths(channels_hdu)
         channel_count = len(wavelengths)
         if channel_count != 102:
@@ -171,24 +277,87 @@ def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np
         if channel_index >= channel_count:
             raise CubeDataError(f"channel_index must be between 0 and {channel_count - 1}")
 
-        axis = _channel_axis(image, channel_count)
-        image_cube = np.moveaxis(image, axis, 0)
-        hits_cube = np.moveaxis(nhits, axis, 0)
-        flags_cube = np.moveaxis(flags, axis, 0)
-        if image_cube.shape != hits_cube.shape or image_cube.shape != flags_cube.shape:
-            raise CubeDataError("IMAGE, NHITS, and FLAGS shapes do not match")
+        axis = _channel_axis(image_shape, channel_count, image_hdu.header)
+        plane_shape = tuple(size for index, size in enumerate(image_shape) if index != axis)
+        pixels = int(np.prod(plane_shape, dtype=np.int64))
+        bitpix_bytes = {8: 1, 16: 2, 32: 4, 64: 8, -32: 4, -64: 8}
+        plane_bytes = pixels * (
+            sum(
+                bitpix_bytes.get(int(hdu.header.get("BITPIX", -32)), 8)
+                for hdu in (image_hdu, nhits_hdu, flags_hdu)
+            ) + 8
+        )
+        if plane_bytes > MAX_CUBE_PLANE_BYTES:
+            raise CubeDataError("Selected cube plane exceeds the configured memory limit")
+
+        index = [slice(None)] * len(image_shape)
+        index[axis] = channel_index
+        index = tuple(index)
+        plane = np.asarray(image_hdu.section[index], dtype=np.float32).copy()
+        hits = np.asarray(nhits_hdu.section[index])
+        flags = np.asarray(flags_hdu.section[index])
+        if plane.shape != plane_shape or hits.shape != plane_shape or flags.shape != plane_shape:
+            raise CubeDataError("Selected IMAGE, NHITS, and FLAGS planes do not match")
 
         blank_value = next(
             (hdu.header.get("BLANKCH") for hdu in hdus if hdu.header.get("BLANKCH") is not None),
             "",
         )
         blank_channels = str(blank_value).replace(" ", "")
-        blank_values = {part for part in blank_channels.replace("[", "").replace("]", "").split(",") if part}
+        blank_values = {
+            part for part in blank_channels.replace("[", "").replace("]", "").split(",") if part
+        }
         if str(channel_index + 1) in blank_values:
             raise CubeDataError("The requested channel is marked blank by the FITS header")
 
-        plane = image_cube[channel_index].astype(np.float32, copy=True)
-        coverage = (hits_cube[channel_index] > 0) & np.isfinite(plane)
+        coverage = (hits > 0) & np.isfinite(plane)
+        plane[~coverage] = np.nan
+
+        if ra_deg is not None or dec_deg is not None:
+            if ra_deg is None or dec_deg is None:
+                raise CubeDataError("Both cutout coordinates are required")
+            try:
+                celestial_wcs = WCS(image_hdu.header).celestial
+                if not celestial_wcs.has_celestial:
+                    raise CubeDataError("Cube does not contain a usable celestial WCS")
+                position = SkyCoord(ra=ra_deg, dec=dec_deg, unit="deg", frame="icrs")
+                cutout_size = (
+                    2 * radius_arcsec * u.arcsec,
+                    2 * radius_arcsec * u.arcsec,
+                )
+                cutout = Cutout2D(
+                    plane,
+                    position=position,
+                    size=cutout_size,
+                    wcs=celestial_wcs,
+                    mode="partial",
+                    fill_value=np.nan,
+                )
+                hits_cutout = Cutout2D(
+                    hits.astype(np.float32),
+                    position=position,
+                    size=cutout_size,
+                    wcs=celestial_wcs,
+                    mode="partial",
+                    fill_value=np.nan,
+                )
+                flags_cutout = Cutout2D(
+                    flags.astype(np.float32),
+                    position=position,
+                    size=cutout_size,
+                    wcs=celestial_wcs,
+                    mode="partial",
+                    fill_value=np.nan,
+                )
+                plane = np.asarray(cutout.data, dtype=np.float32)
+                hits = np.asarray(hits_cutout.data)
+                flags = np.asarray(flags_cutout.data)
+            except CubeDataError:
+                raise
+            except Exception as exc:
+                raise CubeDataError(f"Could not create the requested sky cutout: {exc}") from exc
+
+        coverage = (hits > 0) & np.isfinite(plane)
         plane[~coverage] = np.nan
         valid = plane[np.isfinite(plane)]
         metadata = {
@@ -202,16 +371,19 @@ def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np
             "detector": _channel_value(channels_hdu.data[channel_index], "DETECTOR"),
             "subchannel": _channel_value(channels_hdu.data[channel_index], "SUBCHAN"),
             "image_shape": list(plane.shape),
+            "cutout_center_icrs": (
+                {"ra_deg": float(ra_deg), "dec_deg": float(dec_deg)}
+                if ra_deg is not None and dec_deg is not None else None
+            ),
+            "cutout_radius_arcsec": radius_arcsec if ra_deg is not None else None,
             "valid_pixel_count": int(valid.size),
             "coverage_fraction": float(valid.size / plane.size),
-            "units": str(by_name["IMAGE"].header.get("BUNIT", "MJy/sr")),
+            "units": str(image_hdu.header.get("BUNIT", "unknown")),
             "flags_extension_present": True,
-            "flags_nonzero_pixel_count": int(np.count_nonzero(flags_cube[channel_index])),
-            "zodiacal_light_subtracted": True,
+            "flags_nonzero_pixel_count": int(np.count_nonzero((flags != 0) & (hits > 0))),
             "blank_channels_header": blank_channels or None,
             "source_archive": "NASA/IPAC IRSA",
             "data_product": "SPHEREx DR1 All-Sky Cube",
-            "dataset_doi": "10.26131/IRSA679",
             "synthetic": False,
         }
         if valid.size:
@@ -231,8 +403,12 @@ def render_preview_png(plane: np.ndarray) -> bytes:
     low, high = np.nanpercentile(valid, [1, 99])
     if not np.isfinite(low) or not np.isfinite(high) or high <= low:
         high = low + 1.0
+    valid_mask = np.isfinite(plane)
     scaled = np.clip((np.nan_to_num(plane, nan=low) - low) / (high - low), 0, 1)
     pixels = np.asarray(scaled * 255, dtype=np.uint8)
+    rgba = np.zeros((*pixels.shape, 4), dtype=np.uint8)
+    rgba[..., :3] = pixels[..., None]
+    rgba[..., 3] = np.where(valid_mask, 255, 0).astype(np.uint8)
     output = BytesIO()
-    Image.fromarray(pixels, mode="L").save(output, format="PNG")
+    Image.fromarray(np.flipud(rgba), mode="RGBA").save(output, format="PNG")
     return output.getvalue()

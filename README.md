@@ -32,7 +32,7 @@
 
 ## What it does
 
-TimeLens brings several archive and image-analysis steps into one small, reproducible backend. Start with a sky position, discover relevant observations, inspect real FITS data, and compare compatible image planes while keeping coverage and provenance visible.
+TimeLens brings archive discovery and FITS inspection into one small, reproducible workflow. Start with a sky position, discover relevant observations, and inspect real DR1 cube channels while keeping coverage and provenance visible. The Python analysis modules include WCS reprojection and residual-comparison primitives, but the full multi-epoch workflow is not exposed yet.
 
 **The project is an investigation tool, not a Planet X detector.** A residual or catalog row is a lead for further analysis—not a discovery.
 
@@ -43,8 +43,7 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
 | **SPHEREx discovery** | IRSA SIA2 searches for DR1 / QR3 spectral-image metadata |
 | **SPHEREx DR1 cube** | Tile discovery, bounded FITS retrieval, channel extraction, coverage-masked PNG preview |
 | **NEOWISE-R** | Single-exposure source measurements ordered by Modified Julian Date, with quality fields retained |
-| **WCS registration** | Bilinear reprojection of a target image onto a reference celestial grid |
-| **Difference analysis** | Common-coverage masking and robust residual ranking using median absolute deviation |
+| **Python analysis primitives** | WCS reprojection and robust residual helpers are available as library code; they are not exposed through the HTTP API yet |
 
 <p align="center">
   <img src="docs/architecture.svg" alt="TimeLens system architecture" width="100%">
@@ -62,11 +61,11 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
 | SPHEREx SIA2 and DR1 cube discovery | PSF matching or photometric scaling across epochs |
 | NEOWISE-R single-exposure query | Uncertainty-map propagation |
 | FITS channel preview with coverage masking | Automated moving-object classification or Planet X detection |
-| WCS reprojection and difference primitives | Verified live end-to-end science result or hosted deployment |
+| WCS reprojection and difference primitives (Python library only) | Verified live end-to-end science result or hosted deployment |
 
 ## Quick start
 
-The frontend and API are separate Vercel projects. The frontend uses the web directory; the FastAPI service uses the backend directory. The browser API base is open-sky-timelens-api.vercel.app.
+The public interactive explorer is in `web/index.html` and calls the live archive API; it does not fabricate sky images or science statistics. The frontend and API are separate Vercel projects. The FastAPI service uses the `backend/` directory, and the browser API base is `open-sky-timelens-api.vercel.app`.
 
 
 **Requirements:** Python 3.11 recommended. Install and run from the `backend/` directory.
@@ -144,6 +143,7 @@ Inputs must already have compatible units and photometric calibration. The pipel
 
 ```bash
 cd backend
+python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
@@ -153,7 +153,7 @@ GitHub Actions is configured to run the backend test suite on relevant pushes an
 
 - Frontend: Vercel project open-sky-timelens, root directory web.
 - API: Vercel project open-sky-timelens-api, root directory backend.
-- CORS: TIMELENS_CORS_ORIGINS overrides the default production, preview and local origins.
+- CORS: TIMELENS_CORS_ORIGINS supplies the exact allowed production, preview and local origins.
 - Python: API runtime pinned in backend/.python-version.
 
 ## Scientific integrity
@@ -181,7 +181,8 @@ TimeLens is intentionally conservative about what its outputs mean:
 - [x] DR1 All-Sky Cube tile discovery and channel preview
 - [x] NEOWISE-R single-exposure source query
 - [x] WCS reprojection and coverage-aware difference primitives
-- [ ] Public interactive sky viewer and blink comparison
+- [x] Public interactive archive explorer
+- [ ] Multi-epoch blink comparison
 - [ ] Photometric / PSF matching and uncertainty propagation
 - [ ] Reproducible candidate-evidence report
 

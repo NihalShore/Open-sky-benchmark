@@ -19,8 +19,9 @@ def compare_aligned_images(
 ) -> dict[str, Any]:
     """Subtract compatible same-grid images and rank robust residuals.
 
-    A zero MAD is treated as unresolved noise rather than replaced with a
-    standard deviation that a small number of outliers can dominate.
+    Statistics remain in float64 so small physical flux units and large
+    finite values are not lost to an arbitrary absolute epsilon or float32
+    conversion.
     """
     reference = np.asarray(reference, dtype=np.float64)
     target = np.asarray(target, dtype=np.float64)
@@ -35,19 +36,21 @@ def compare_aligned_images(
         raise DifferenceImageError("max_candidates must be a positive integer")
 
     valid = np.isfinite(reference) & np.isfinite(target)
+    difference = np.full(reference.shape, np.nan, dtype=np.float64)
+    with np.errstate(over="ignore", invalid="ignore"):
+        difference[valid] = target[valid] - reference[valid]
+    valid &= np.isfinite(difference)
+    difference[~valid] = np.nan
     if np.count_nonzero(valid) < 3:
         raise DifferenceImageError("At least three overlapping finite pixels are required")
 
-    difference = np.full(reference.shape, np.nan, dtype=np.float32)
-    difference[valid] = (target[valid] - reference[valid]).astype(np.float32)
-
-    residuals = difference[valid].astype(np.float64)
+    residuals = difference[valid]
     center = float(np.median(residuals))
     mad = float(np.median(np.abs(residuals - center)))
     robust_sigma = 1.4826 * mad
-    significance = np.full(reference.shape, np.nan, dtype=np.float32)
+    significance = np.full(reference.shape, np.nan, dtype=np.float64)
 
-    if not np.isfinite(robust_sigma) or robust_sigma <= np.finfo(float).eps:
+    if not np.isfinite(robust_sigma) or robust_sigma <= 0.0:
         return {
             "difference": difference,
             "significance": significance,
@@ -60,13 +63,18 @@ def compare_aligned_images(
             "synthetic": False,
         }
 
-    significance[valid] = ((difference[valid] - center) / robust_sigma).astype(np.float32)
-    locations = np.argwhere(valid & (np.abs(significance) >= sigma_threshold))
+    significance[valid] = (difference[valid] - center) / robust_sigma
+    candidate_mask = valid & (np.abs(significance) >= sigma_threshold)
+    locations = np.argwhere(candidate_mask)
+    scores = np.abs(significance[candidate_mask])
+    if len(locations) > max_candidates:
+        selected = np.argpartition(scores, -max_candidates)[-max_candidates:]
+        locations = locations[selected]
     ranked = sorted(
         locations,
         key=lambda point: abs(float(significance[tuple(point)])),
         reverse=True,
-    )[:max_candidates]
+    )
 
     candidates = [
         {
@@ -84,7 +92,7 @@ def compare_aligned_images(
         "valid_mask": valid,
         "background_offset": center,
         "robust_sigma": robust_sigma,
-        "candidate_count": int(len(locations)),
+        "candidate_count": int(np.count_nonzero(candidate_mask)),
         "candidates": candidates,
         "status": "completed",
         "synthetic": False,
