@@ -79,3 +79,18 @@ def test_reprojection_does_not_interpolate_across_missing_support():
     )
 
     assert np.isnan(result[4, 4])
+
+
+
+def test_reprojection_handles_swapped_celestial_axis_order():
+    standard = make_wcs(crval=(120.0, 30.0))
+    swapped = WCS(naxis=2)
+    swapped.wcs.ctype = ["DEC--TAN", "RA---TAN"]
+    swapped.wcs.crpix = [5.0, 5.0]
+    swapped.wcs.crval = [30.0, 120.0]
+    swapped.wcs.cdelt = [0.01, -0.01]
+
+    image = np.arange(100, dtype=float).reshape(10, 10)
+    result = reproject_to_reference_grid(image, swapped, standard, image.shape)
+
+    assert result[4, 4] == pytest.approx(image[4, 4], abs=1e-4)
