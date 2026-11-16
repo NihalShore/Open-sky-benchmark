@@ -311,20 +311,44 @@ def inspect_cube(
                 if not celestial_wcs.has_celestial:
                     raise CubeDataError("Cube does not contain a usable celestial WCS")
                 position = SkyCoord(ra=ra_deg, dec=dec_deg, unit="deg", frame="icrs")
+                cutout_size = (
+                    2 * radius_arcsec * u.arcsec,
+                    2 * radius_arcsec * u.arcsec,
+                )
                 cutout = Cutout2D(
                     plane,
                     position=position,
-                    size=(2 * radius_arcsec * u.arcsec, 2 * radius_arcsec * u.arcsec),
+                    size=cutout_size,
+                    wcs=celestial_wcs,
+                    mode="partial",
+                    fill_value=np.nan,
+                )
+                hits_cutout = Cutout2D(
+                    hits.astype(np.float32),
+                    position=position,
+                    size=cutout_size,
+                    wcs=celestial_wcs,
+                    mode="partial",
+                    fill_value=np.nan,
+                )
+                flags_cutout = Cutout2D(
+                    flags.astype(np.float32),
+                    position=position,
+                    size=cutout_size,
                     wcs=celestial_wcs,
                     mode="partial",
                     fill_value=np.nan,
                 )
                 plane = np.asarray(cutout.data, dtype=np.float32)
+                hits = np.asarray(hits_cutout.data)
+                flags = np.asarray(flags_cutout.data)
             except CubeDataError:
                 raise
             except Exception as exc:
                 raise CubeDataError(f"Could not create the requested sky cutout: {exc}") from exc
 
+        coverage = (hits > 0) & np.isfinite(plane)
+        plane[~coverage] = np.nan
         valid = plane[np.isfinite(plane)]
         metadata = {
             "channel_index": channel_index,
