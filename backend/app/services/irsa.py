@@ -5,17 +5,14 @@ It deliberately does not download FITS files yet.
 """
 from __future__ import annotations
 
-from contextlib import contextmanager
 from io import BytesIO
-from typing import Any, Iterator
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
-import astropy.units as u
 import numpy as np
 import requests
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
-from astroquery.ipac.irsa.core import IrsaClass
 
 ALLOWED_COLLECTIONS = (
     "spherex_dr1",
@@ -67,20 +64,6 @@ class _BoundedIrsaSession(requests.Session):
                 current_kwargs.pop("json", None)
             response = super().request(current_method, next_url, **current_kwargs)
         return response
-
-
-@contextmanager
-def irsa_client(timeout: tuple[float, float] = IRSA_TIMEOUT) -> Iterator[IrsaClass]:
-    """Yield an isolated, thread-safe IRSA client with bounded HTTP timeouts."""
-    client = IrsaClass()
-    client._session.close()
-    session = _BoundedIrsaSession(timeout=timeout)
-    session.headers.update(client._session.headers)
-    client._session = session
-    try:
-        yield client
-    finally:
-        session.close()
 
 
 def validate_sky_query(
@@ -202,7 +185,7 @@ def query_sia_direct(
 
     position = validate_sky_query(ra_deg, dec_deg, radius_arcsec)
     params: list[tuple[str, str]] = [
-        ("POS", f"circle {position.ra.deg:.10f} {position.dec.deg:.10f} {float(radius_arcsec) / 3600.0:.10f}"),
+        ("POS", f"CIRCLE {position.ra.deg:.10f} {position.dec.deg:.10f} {float(radius_arcsec) / 3600.0:.10f}"),
         ("MAXREC", str(maxrec)),
         ("RESPONSEFORMAT", "VOTABLE"),
     ]
@@ -229,30 +212,19 @@ def query_sia(
     *,
     maxrec: int = MAX_SIA_RECORDS,
 ) -> Table:
-    """Try a direct SIA2 query first, then fall back to Astroquery."""
-    try:
-        return query_sia_direct(
-            ra_deg,
-            dec_deg,
-            radius_arcsec,
-            collections,
-            maxrec=maxrec,
-        )
-    except Exception as direct_error:
-        position = validate_sky_query(ra_deg, dec_deg, radius_arcsec)
-        with irsa_client() as client:
-            try:
-                return client.query_sia(
-                    pos=(position, float(radius_arcsec) * u.arcsec),
-                    collection=list(dict.fromkeys(collections)),
-                    maxrec=maxrec,
-                )
-            except Exception as astroquery_error:
-                raise RuntimeError(
-                    "Direct IRSA SIA2 query and Astroquery fallback both failed: "
-                    f"{type(direct_error).__name__}: {direct_error}; "
-                    f"{type(astroquery_error).__name__}: {astroquery_error}"
-                ) from astroquery_error
+    """Query IRSA SIA2 directly and preserve the original upstream error.
+
+    Astroquery performs a VOSI capabilities request before issuing the same
+    SIA query. That extra request has been returning HTTP 502 in production,
+    so it is not used as a fallback for the direct SIA2 request.
+    """
+    return query_sia_direct(
+        ra_deg,
+        dec_deg,
+        radius_arcsec,
+        collections,
+        maxrec=maxrec,
+    )
 
 
 def search_spherex(
