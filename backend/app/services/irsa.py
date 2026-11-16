@@ -62,8 +62,17 @@ def _trusted_access_url(value: Any) -> str | None:
     if not isinstance(url, str):
         return None
 
-    parsed = urlparse(url)
-    if parsed.scheme != "https" or parsed.hostname != IRSA_HOST:
+    try:
+        parsed = urlparse(url)
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname != IRSA_HOST
+            or parsed.port not in (None, 443)
+            or parsed.username is not None
+            or parsed.password is not None
+        ):
+            return None
+    except ValueError:
         return None
     return url
 
