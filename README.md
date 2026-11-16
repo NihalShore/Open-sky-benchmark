@@ -154,7 +154,7 @@ GitHub Actions is configured to run the backend test suite on relevant pushes an
 
 - Frontend: Vercel project open-sky-timelens, root directory web.
 - API: Vercel project open-sky-timelens-api, root directory backend.
-- CORS: TIMELENS_CORS_ORIGINS overrides the default production, preview and local origins.
+- CORS: TIMELENS_CORS_ORIGINS supplies the exact allowed production, preview and local origins.
 - Python: API runtime pinned in backend/.python-version.
 
 ## Scientific integrity
