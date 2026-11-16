@@ -1,14 +1,13 @@
 """Inspect a real SPHEREx DR1 All-Sky Cube FITS product.
 
 Run from the backend directory:
-    python scripts/inspect_spherex_cube.py --ra 127.69444 --dec -39.17760
+    python -m scripts.inspect_spherex_cube --ra 127.69444 --dec -39.17760
 """
 from __future__ import annotations
 
 import argparse
 import json
-from io import BytesIO
-from typing import Any
+from typing import Any, BinaryIO
 
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -60,16 +59,26 @@ def _celestial_sample(header: fits.Header) -> dict[str, Any]:
         return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
 
 
-def inspect_product(payload: bytes, product: dict[str, Any]) -> dict[str, Any]:
+def inspect_product(payload: bytes | BinaryIO, product: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(payload, (bytes, bytearray)):
+        source = payload
+        memmap = False
+        download_bytes = len(payload)
+    else:
+        source = payload
+        source.seek(0, 2)
+        download_bytes = source.tell()
+        source.seek(0)
+        memmap = True
+
     report: dict[str, Any] = {
         "product": product,
-        "download_bytes": len(payload),
+        "download_bytes": download_bytes,
         "hdus": [],
     }
-    with fits.open(BytesIO(payload), memmap=False) as hdus:
+    with fits.open(source, memmap=memmap, lazy_load_hdus=True) as hdus:
         for index, hdu in enumerate(hdus):
-            data = hdu.data
-            shape = list(data.shape) if data is not None else None
+            shape = list(hdu.shape) if hdu.shape is not None else None
             item: dict[str, Any] = {
                 "index": index,
                 "name": hdu.name,
@@ -77,9 +86,10 @@ def inspect_product(payload: bytes, product: dict[str, Any]) -> dict[str, Any]:
                 "shape": shape,
                 "header": _header_summary(hdu.header),
             }
-            if hdu.name.upper() == "IMAGE" and data is not None:
+            if hdu.name.upper() == "IMAGE":
                 item["celestial_wcs"] = _celestial_sample(hdu.header)
-            if hdu.name.upper() == "SPECTRAL_CHANNELS" and data is not None:
+            if hdu.name.upper() == "SPECTRAL_CHANNELS":
+                data = hdu.data
                 item["rows"] = len(data)
                 item["columns"] = list(hdu.columns.names or [])
             report["hdus"].append(item)
@@ -102,7 +112,10 @@ def main() -> int:
 
     product = products[0]
     payload = download_cube(product["access_url"])
-    print(json.dumps(inspect_product(payload, product), indent=2, sort_keys=True))
+    try:
+        print(json.dumps(inspect_product(payload, product), indent=2, sort_keys=True))
+    finally:
+        payload.close()
     return 0
 
 
