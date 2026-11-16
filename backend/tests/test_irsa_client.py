@@ -12,7 +12,7 @@ def test_timed_session_applies_finite_connect_and_read_timeouts(monkeypatch):
     session = TimedSession()
     captured = {}
 
-    def fake_request(method, url, **kwargs):
+    def fake_request(self, method, url, **kwargs):
         captured.update(kwargs)
         return "response"
 
