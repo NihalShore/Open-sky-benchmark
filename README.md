@@ -32,7 +32,7 @@
 
 ## What it does
 
-TimeLens brings several archive and image-analysis steps into one small, reproducible backend. Start with a sky position, discover relevant observations, inspect real FITS data, and compare compatible image planes while keeping coverage and provenance visible.
+TimeLens brings archive discovery and FITS inspection into one small, reproducible workflow. Start with a sky position, discover relevant observations, and inspect real DR1 cube channels while keeping coverage and provenance visible. The Python analysis modules include WCS reprojection and residual-comparison primitives, but the full multi-epoch workflow is not exposed yet.
 
 **The project is an investigation tool, not a Planet X detector.** A residual or catalog row is a lead for further analysis—not a discovery.
 
