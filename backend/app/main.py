@@ -47,7 +47,6 @@ cors_origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_origin_regex=r"https://open-sky-timelens(?:-[a-z0-9-]+)?\.vercel\.app",
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type"],
     expose_headers=[
