@@ -117,7 +117,7 @@ def test_neowise_search_returns_time_ordered_archive_measurements(monkeypatch):
 
     def fake_search(ra_deg, dec_deg, radius_arcsec, limit):
         assert (ra_deg, dec_deg, radius_arcsec, limit) == (127.6, -39.1, 15, 25)
-        return fake_detections
+        return {"detections": fake_detections, "truncated": False}
 
     monkeypatch.setattr(main, "search_neowise", fake_search)
     response = client.get(
@@ -128,6 +128,7 @@ def test_neowise_search_returns_time_ordered_archive_measurements(monkeypatch):
     payload = response.json()
     assert payload["catalog"] == "neowiser_p1bs_psd"
     assert payload["time_field"] == "mjd"
+    assert payload["truncated"] is False
     assert payload["bands"] == ["W1", "W2"]
     assert payload["detections"][0]["mjd"] == 59000.0
     assert payload["synthetic"] is False
