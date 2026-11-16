@@ -60,7 +60,7 @@ The zero-based channel index is 0–101. Response headers include source, channe
 A small inspection utility is available:
 
 ```bash
-python scripts/inspect_spherex_cube.py --ra 127.69444 --dec -39.17760
+python -m scripts.inspect_spherex_cube --ra 127.69444 --dec -39.17760
 ```
 
 This performs a live archive query and download, so it requires network access and may be rate-limited.
@@ -109,6 +109,7 @@ result = compare_wcs_images(
 Run from this directory:
 
 ```bash
+python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
