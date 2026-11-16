@@ -5,14 +5,17 @@ It deliberately does not download FITS files yet.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from io import BytesIO
-from typing import Any
+from typing import Any, Iterator
 from urllib.parse import urljoin, urlparse
 
 import numpy as np
 import requests
+import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
+from astroquery.ipac.irsa.core import IrsaClass
 
 ALLOWED_COLLECTIONS = (
     "spherex_dr1",
@@ -65,6 +68,20 @@ class _BoundedIrsaSession(requests.Session):
             response = super().request(current_method, next_url, **current_kwargs)
         return response
 
+
+
+@contextmanager
+def irsa_client(timeout: tuple[float, float] = IRSA_TIMEOUT) -> Iterator[IrsaClass]:
+    """Yield an isolated IRSA client for TAP/catalog queries such as NEOWISE."""
+    client = IrsaClass()
+    client._session.close()
+    session = _BoundedIrsaSession(timeout=timeout)
+    session.headers.update(client._session.headers)
+    client._session = session
+    try:
+        yield client
+    finally:
+        session.close()
 
 def validate_sky_query(
     ra_deg: float,
