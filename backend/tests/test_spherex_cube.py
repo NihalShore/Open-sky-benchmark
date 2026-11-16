@@ -88,3 +88,31 @@ def test_official_irsa_https_url_is_accepted():
     assert trusted_cube_url(
         "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/test.fits"
     ).startswith("https://irsa.ipac.caltech.edu/")
+
+
+
+def test_preview_keeps_missing_pixels_transparent_and_flips_fits_rows():
+    from PIL import Image
+
+    plane = np.array([[1.0, 2.0], [3.0, np.nan]], dtype=np.float32)
+    preview = Image.open(BytesIO(render_preview_png(plane))).convert("RGBA")
+
+    assert preview.size == (2, 2)
+    assert preview.getpixel((1, 0))[3] == 0
+    assert preview.getpixel((0, 0))[3] == 255
+
+
+def test_channel_axis_uses_spectral_wcs_axis_when_shape_is_ambiguous():
+    from astropy.wcs import WCS
+    from app.services.spherex_cube import _channel_axis
+
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ["WAVE", "DEC--TAN", "RA---TAN"]
+    wcs.wcs.cunit = ["um", "deg", "deg"]
+    wcs.wcs.crpix = [1.0, 1.0, 1.0]
+    wcs.wcs.crval = [1.0, 0.0, 0.0]
+    wcs.wcs.cdelt = [0.01, 0.01, -0.01]
+    header = wcs.to_header()
+    image = np.zeros((10, 102, 102))
+
+    assert _channel_axis(image, 102, header) == 2
