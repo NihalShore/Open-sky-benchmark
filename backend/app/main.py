@@ -24,7 +24,7 @@ from app.services.spherex_cube import (
 )
 
 logger = logging.getLogger(__name__)
-_CUBE_PREVIEW_LIMIT = asyncio.Semaphore(2)
+_CUBE_PREVIEW_LIMIT = asyncio.Semaphore(1)
 
 app = FastAPI(
     title="SPHEREx TimeLens API",
