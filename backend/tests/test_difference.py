@@ -30,6 +30,33 @@ def test_difference_is_target_minus_reference():
     assert result["background_offset"] == pytest.approx(2.0)
 
 
+def test_difference_preserves_float64_above_float32_range():
+    rng = np.random.default_rng(5)
+    reference = np.zeros((20, 20), dtype=np.float64)
+    target = rng.normal(1e40, 1e39, (20, 20))
+    target[4, 7] += 1e41
+
+    result = compare_aligned_images(reference, target, sigma_threshold=5.0)
+
+    assert result["status"] == "completed"
+    assert result["difference"].dtype == np.float64
+    assert np.isfinite(result["robust_sigma"])
+    assert any(item["x"] == 7 and item["y"] == 4 for item in result["candidates"])
+
+
+def test_difference_resolves_tiny_sub_float32_scatter():
+    rng = np.random.default_rng(9)
+    reference = np.zeros((20, 20), dtype=np.float64)
+    target = rng.normal(0.0, 1e-40, (20, 20))
+    target[6, 9] = 1e-38
+
+    result = compare_aligned_images(reference, target, sigma_threshold=5.0)
+
+    assert result["status"] == "completed"
+    assert result["robust_sigma"] > 0
+    assert any(item["x"] == 9 and item["y"] == 6 for item in result["candidates"])
+
+
 def test_difference_rejects_different_shapes():
     with pytest.raises(DifferenceImageError, match="identical shapes"):
         compare_aligned_images(np.zeros((4, 4)), np.zeros((5, 4)))

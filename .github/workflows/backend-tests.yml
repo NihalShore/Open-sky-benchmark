@@ -1,15 +1,17 @@
-name: Backend tests
+name: Backend and web checks
 
 on:
   pull_request:
     branches: [main, "feat/**"]
     paths:
       - "backend/**"
+      - "web/**"
       - ".github/workflows/backend-tests.yml"
   push:
     branches: [main, "feat/**"]
     paths:
       - "backend/**"
+      - "web/**"
       - ".github/workflows/backend-tests.yml"
 
 permissions:
@@ -26,12 +28,34 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: backend/requirements-dev.txt
       - name: Install backend dependencies
         working-directory: backend
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run test suite
+          pip install -r requirements-dev.txt
+      - name: Run backend test suite
         working-directory: backend
         run: python -m pytest -q
+
+  frontend-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Validate web HTML, JS syntax, and DOM element IDs
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          html = Path("web/index.html").read_text(encoding="utf-8")
+          ids = set(re.findall(r'\bid="([^"]+)"', html))
+          scripts = re.findall(r"<script>([\s\S]*?)</script>", html)
+          assert len(scripts) == 1, f"Expected 1 inline script, found {len(scripts)}"
+          referenced = set(re.findall(r'\$\("([^"]+)"\)', scripts[0]))
+          missing = sorted(referenced - ids)
+          assert not missing, f"Script references missing DOM IDs: {missing}"
+          Path("/tmp/timelens_check.js").write_text(scripts[0], encoding="utf-8")
+          PY
+          node --check /tmp/timelens_check.js

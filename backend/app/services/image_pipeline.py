@@ -7,7 +7,7 @@ import numpy as np
 from astropy.wcs import WCS
 
 from app.services.difference import compare_aligned_images
-from app.services.reprojection import reproject_to_reference_grid
+from app.services.reprojection import reproject_with_coverage
 
 
 def compare_wcs_images(
@@ -22,9 +22,9 @@ def compare_wcs_images(
 ) -> dict[str, Any]:
     """Reproject target onto reference grid, then compare common valid pixels.
 
-    The inputs must already be in compatible units and photometrically
-    calibrated. This routine does not perform PSF matching, photometric
-    scaling, background matching, or uncertainty propagation.
+    The inputs must already be in compatible surface-brightness units and
+    photometrically calibrated. This routine does not perform PSF matching,
+    photometric scaling, background matching, or uncertainty propagation.
     """
     reference = np.asarray(reference, dtype=np.float64)
     target = np.asarray(target, dtype=np.float64)
@@ -33,18 +33,13 @@ def compare_wcs_images(
     if not np.isfinite(minimum_coverage) or not 0 < minimum_coverage <= 1:
         raise ValueError("minimum_coverage must be in the interval (0, 1]")
 
-    aligned_target = reproject_to_reference_grid(
+    aligned_target, coverage, diagnostics = reproject_with_coverage(
         target, target_wcs, reference_wcs, reference.shape
     )
-    source_coverage = np.isfinite(target).astype(np.float64)
-    coverage = reproject_to_reference_grid(
-        source_coverage, target_wcs, reference_wcs, reference.shape
-    )
-    coverage = np.clip(coverage, 0.0, 1.0)
     coverage_mask = np.isfinite(coverage) & (coverage >= minimum_coverage)
     common_valid_mask = np.isfinite(reference) & coverage_mask & np.isfinite(aligned_target)
 
-    masked_target = aligned_target.copy()
+    masked_target = aligned_target.astype(np.float64, copy=True)
     masked_target[~coverage_mask] = np.nan
     result = compare_aligned_images(
         reference,
@@ -52,6 +47,14 @@ def compare_wcs_images(
         sigma_threshold=sigma_threshold,
         max_candidates=max_candidates,
     )
+
+    warnings_list: list[str] = []
+    ratio = diagnostics.get("pixel_scale_ratio")
+    if ratio is not None and (ratio < 0.8 or ratio > 1.25):
+        warnings_list.append(
+            f"Target/reference pixel scale ratio is {ratio:.3f}; bilinear resampling does not conserve flux across mismatched pixel scales."
+        )
+
     result.update(
         {
             "aligned_target": aligned_target,
@@ -61,8 +64,11 @@ def compare_wcs_images(
             "reference_shape": tuple(reference.shape),
             "registration": "target_reprojected_to_reference_wcs_bilinear",
             "photometric_calibration": "caller_supplied_compatible_calibration",
+            "flux_conservation": "surface_brightness_bilinear_not_flux_conserving",
             "uncertainty_propagation": False,
             "psf_matching": False,
+            **diagnostics,
+            "warnings": warnings_list,
         }
     )
     return result
