@@ -1,48 +1,67 @@
 # SPHEREx TimeLens
 
-**NASA Space Apps 2026 — Planet X & SPHEREx**
+NASA Space Apps 2026 — Planet X & SPHEREx
 
-An open exploration tool for real SPHEREx infrared observations. TimeLens is designed to help people inspect the sky across observation time and wavelength, compare valid data, and understand the evidence behind changes.
+Backend for inspecting real SPHEREx and NEOWISE archive data.
+TimeLens helps explore observations across position, time, and wavelength.
+It does not claim to detect or confirm Planet X.
 
-## Product direction
+## What works
 
-**Integrated, science-first exploration.**
+FastAPI backend on this tree:
 
-The intended workflow is:
+- IRSA SIA2 discovery for SPHEREx spectral images (DR1 / QR3)
+- DR1 All-Sky Cube tile search, FITS channel extraction, coverage-masked PNG preview
+- NEOWISE-R single-exposure source search (MJD-ordered, quality fields kept)
+- WCS reprojection of a target image onto a reference grid (bilinear)
+- Coverage-aware difference imaging on aligned planes
+- End-to-end path: reproject → coverage mask → common-valid mask → residual candidates
 
-1. Select a sky region using ICRS right ascension and declination.
-2. Discover available SPHEREx observations from IRSA.
-3. Inspect spectral-image products and their wavelength information.
-4. Compare compatible observations with coverage-aware visualization.
-5. Investigate flagged changes with provenance and uncertainty.
-6. Export a reproducible evidence report.
+All science pixels come from IRSA. Live paths do not invent data.
 
-TimeLens is an exploration and investigation tool. It does not claim to detect or confirm Planet X.
+## What does not work yet
 
-## Build status
+- No public frontend / blink UI / spectral lab panels
+- No PSF matching or photometric scaling between epochs
+- No uncertainty-map propagation
+- No moving-object classifier
+- Live IRSA downloads are rate-limited and not guaranteed in every environment
 
-The first backend vertical slice is on the `feat/spherex-first-light` branch:
+## Run
 
-- FastAPI health and coordinate-validated SPHEREx search endpoints.
-- IRSA SIA2 discovery for DR1/QR3 spectral images and the DR1 All-Sky Cube.
-- Bounded FITS download and validation for the cube product.
-- Channel extraction using `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS`.
-- Coverage-masked, display-only PNG preview with archive provenance.
-- FITS-fixture tests, API contract tests, and a GitHub Actions test workflow.
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
 
-A live end-to-end IRSA download and local test run have **not yet been verified**. Spatial WCS rendering, time comparison, and source analysis remain future work. See [backend setup and status](backend/README.md).
+API docs: http://127.0.0.1:8000/docs  
+Health: http://127.0.0.1:8000/api/v1/health
+
+## Tests
+
+```bash
+cd backend && pytest -q
+```
+
+GitHub Actions runs the same suite on pull requests and `feat/**` pushes.
+
+## Scientific rules
+
+- Preserve original archive products and record provenance
+- Inspect multi-extension FITS; do not assume the primary HDU is science data
+- Respect spatial and wavelength-dependent WCS
+- Compare only compatible data; mask missing coverage explicitly
+- Treat residuals as investigation candidates, not discoveries
+- Label synthetic fixtures clearly; never present them as NASA observations
 
 ## Official data sources
 
-- [NASA/IPAC IRSA SPHEREx Data Access](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/)
+- [IRSA SPHEREx Data Access](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/)
 - [SPHEREx Data Releases](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-releases/)
 - [IRSA SPHEREx spectral-image tutorial](https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/)
 
-## Scientific integrity
+## License
 
-- Preserve original archive products and record their provenance.
-- Inspect multi-extension FITS products; never assume the primary HDU is the science image.
-- Respect spatial and wavelength-dependent WCS.
-- Compare compatible data and explicitly mask missing coverage.
-- Treat image differences as investigation candidates, not proof of motion or discovery.
-- Distinguish real observations from synthetic test fixtures in the UI and reports.
+MIT
