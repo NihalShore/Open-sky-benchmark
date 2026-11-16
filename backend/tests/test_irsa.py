@@ -85,6 +85,21 @@ def test_query_sia_direct_uses_documented_endpoint_and_votable(monkeypatch):
     ]
 
 
+def test_query_sia_does_not_call_capabilities_fallback(monkeypatch):
+    direct_error = requests.HTTPError("IRSA SIA endpoint returned 502")
+
+    def fail_direct(*args, **kwargs):
+        raise direct_error
+
+    def forbidden_fallback(*args, **kwargs):
+        raise AssertionError("Astroquery capabilities fallback must not run")
+
+    monkeypatch.setattr(irsa, "query_sia_direct", fail_direct)
+    monkeypatch.setattr(irsa, "irsa_client", forbidden_fallback, raising=False)
+
+    with pytest.raises(requests.HTTPError, match="SIA endpoint returned 502"):
+        irsa.query_sia(127.6, -39.1, 36.0, ["spherex_dr1"])
+
 def test_search_spherex_cleans_nul_bytes_deduplicates_and_passes_maxrec(monkeypatch):
     calls = []
 
