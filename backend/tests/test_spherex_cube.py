@@ -29,9 +29,17 @@ def make_cube_fixture() -> bytes:
     ], name="SPECTRAL_CHANNELS")
     primary = fits.PrimaryHDU()
     primary.header["BLANKCH"] = "51,52"
+    image_wcs = WCS(naxis=3)
+    image_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN", "WAVE"]
+    image_wcs.wcs.cunit = ["deg", "deg", "um"]
+    image_wcs.wcs.crpix = [4.5, 4.5, 1.0]
+    image_wcs.wcs.crval = [120.0, 30.0, 1.0]
+    image_wcs.wcs.cdelt = [-0.001, 0.001, 0.01]
+    image_hdu = fits.ImageHDU(data=image, name="IMAGE")
+    image_hdu.header.update(image_wcs.to_header())
     hdus = fits.HDUList([
         primary,
-        fits.ImageHDU(data=image, name="IMAGE"),
+        image_hdu,
         fits.ImageHDU(data=nhits, name="NHITS"),
         fits.ImageHDU(data=flags, name="FLAGS"),
         channels,
@@ -159,3 +167,19 @@ def test_inspect_cube_reads_from_spooled_file():
 
     assert metadata["channel_number"] == 1
     assert np.isnan(plane[0, 0])
+
+
+
+def test_inspect_cube_returns_coordinate_centered_cutout():
+    metadata, plane = inspect_cube(
+        make_cube_fixture(),
+        channel_index=0,
+        ra_deg=120.0,
+        dec_deg=30.0,
+        radius_arcsec=10,
+    )
+
+    assert plane.shape[0] < 8
+    assert plane.shape[1] < 8
+    assert metadata["cutout_center_icrs"] == {"ra_deg": 120.0, "dec_deg": 30.0}
+    assert metadata["cutout_radius_arcsec"] == 10
