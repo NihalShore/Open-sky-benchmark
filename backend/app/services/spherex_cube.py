@@ -16,7 +16,7 @@ from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.wcs import WCS
 import astropy.units as u
-from astroquery.ipac.irsa import Irsa
+from app.services.irsa_client import new_irsa_client
 from PIL import Image
 
 IRSA_HOST = "irsa.ipac.caltech.edu"
@@ -50,7 +50,7 @@ def trusted_cube_url(value: str) -> str:
 def discover_cube_products(ra_deg: float, dec_deg: float, radius_arcsec: float = 30) -> list[dict[str, Any]]:
     """Find DR1 All-Sky Cube tiles overlapping an ICRS position."""
     position = SkyCoord(ra=ra_deg, dec=dec_deg, unit="deg", frame="icrs")
-    table = Irsa.query_sia(
+    table = new_irsa_client().query_sia(
         pos=(position, radius_arcsec * u.arcsec),
         collection=CUBE_COLLECTION,
     )
