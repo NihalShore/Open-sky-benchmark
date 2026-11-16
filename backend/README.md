@@ -4,7 +4,7 @@ The backend is a FastAPI service plus reusable astronomy/image-analysis modules.
 
 ## Requirements and local run
 
-Python 3.11 is the CI target.
+Python 3.13 is the CI and `.python-version` target (Python 3.11+ supported).
 
 ```bash
 python -m venv .venv
@@ -16,7 +16,7 @@ source .venv/bin/activate
 # .venv\Scripts\Activate.ps1
 
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
@@ -53,9 +53,9 @@ Coordinates are ICRS degrees. Right ascension must be in [0, 360), declination i
 
 `GET /api/v1/cube/search?ra_deg=...&dec_deg=...` discovers tiles in the `spherex_dr1_cube` collection.
 
-`GET /api/v1/cube/preview?ra_deg=...&dec_deg=...&channel_index=0` retrieves a bounded FITS product from the official IRSA HTTPS host, validates the required extensions, extracts one channel, applies the `NHITS > 0` coverage mask, and returns a display-only PNG.
+`GET /api/v1/cube/preview?ra_deg=...&dec_deg=...&channel_index=0` retrieves a bounded FITS product from the official IRSA HTTPS host, validates the required extensions, extracts one channel, applies the `NHITS > 0` coverage mask, and returns a display-only PNG (returning `502` on upstream IRSA failures and `422` when a FITS structure is unusable).
 
-The zero-based channel index is 0–101. Response headers include source, channel number, wavelength when available, coverage fraction, units, and a synthetic-data flag. The preview is not a calibrated photometry product. The code reads the FITS `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS` extensions; it does not use HiPS PNGs as science input.
+The zero-based channel index is 0–101. Response headers include source, observation ID, collection, channel number, wavelength when available, coverage fraction, units, covered flagged-pixel count, and a synthetic-data flag. The preview is not a calibrated photometry product. The code reads the FITS `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS` extensions; it does not use HiPS PNGs as science input.
 
 A small inspection utility is available:
 
@@ -67,7 +67,7 @@ This performs a live archive query and download, so it requires network access a
 
 ### NEOWISE-R single-exposure search
 
-`GET /api/v1/neowise/search?ra_deg=...&dec_deg=...&radius_arcsec=15&limit=200` queries the `neowiser_p1bs_psd` catalog. Results are sorted by MJD and retain W1/W2 magnitudes, uncertainties, S/N, photometric quality, frame quality, contamination flags, and scan/frame identifiers.
+`GET /api/v1/neowise/search?ra_deg=...&dec_deg=...&radius_arcsec=15&limit=200` queries the `neowiser_p1bs_psd` catalog. Results are ordered by MJD (`ORDER BY mjd ASC, scan_id ASC, frame_num ASC`), expose a `truncated` flag when more rows exist beyond `limit`, and retain W1/W2 magnitudes, uncertainties, S/N, photometric quality, frame quality, contamination flags, and scan/frame identifiers.
 
 The catalog contains artifacts and low-quality rows. A returned measurement is not, by itself, evidence of a moving object. Quality fields are preserved for downstream filtering and review.
 
@@ -106,7 +106,7 @@ result = compare_wcs_images(
 
 ## Tests
 
-Run from this directory:
+Run from this directory after installing `requirements-dev.txt`:
 
 ```bash
 python -m pytest -q
@@ -124,6 +124,8 @@ Tests use generated FITS fixtures and mocked IRSA calls. They do not require liv
 
 ## Vercel deployment
 
-Deploy this directory as a separate Vercel project with backend as its root directory. Vercel detects the FastAPI application through the top-level index.py entrypoint. Python is pinned to 3.13. No build command or output directory is required.
+Deploy this directory as a separate Vercel project with `backend` as its root directory. Vercel detects the FastAPI application through the top-level `index.py` entrypoint. Python is pinned to `3.13`. No build command or output directory is required.
 
-GET /api/v1/health is a process check only; it does not query IRSA. Test SIA2 discovery and FITS retrieval separately.
+Note: `astropy` + `astroquery` + `numpy` + `Pillow` push serverless unzipped package limits (~250 MB) and DR1 FITS cubes can be hundreds of MiB, so container or dedicated VM hosting is recommended if serverless bundle limits or FITS memory timeouts are hit.
+
+`GET /api/v1/health` is a process check only; it does not query IRSA. Test SIA2 discovery and FITS retrieval separately.

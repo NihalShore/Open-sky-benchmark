@@ -4,12 +4,12 @@ Thanks for helping improve TimeLens. Contributions should make the code more rep
 
 ## Development setup
 
-Use Python 3.11 and run commands from `backend/`:
+Use Python 3.11+ (CI runs 3.13) and run commands from `backend/`:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 

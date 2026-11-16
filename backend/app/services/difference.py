@@ -10,6 +10,18 @@ class DifferenceImageError(ValueError):
     """Raised when two image planes cannot be compared safely."""
 
 
+def _compact_float_array(values: np.ndarray, valid: np.ndarray) -> np.ndarray:
+    """Use float32 when finite values fit safely; preserve float64 otherwise."""
+    finite_vals = values[valid]
+    if finite_vals.size and np.max(np.abs(finite_vals)) > float(np.finfo(np.float32).max) * 0.5:
+        out = np.full(values.shape, np.nan, dtype=np.float64)
+        out[valid] = finite_vals
+        return out
+    out = np.full(values.shape, np.nan, dtype=np.float32)
+    out[valid] = finite_vals.astype(np.float32)
+    return out
+
+
 def compare_aligned_images(
     reference: np.ndarray,
     target: np.ndarray,
@@ -38,16 +50,19 @@ def compare_aligned_images(
     if np.count_nonzero(valid) < 3:
         raise DifferenceImageError("At least three overlapping finite pixels are required")
 
-    difference = np.full(reference.shape, np.nan, dtype=np.float32)
-    difference[valid] = (target[valid] - reference[valid]).astype(np.float32)
+    diff_64 = np.full(reference.shape, np.nan, dtype=np.float64)
+    residuals = target[valid] - reference[valid]
+    if not np.all(np.isfinite(residuals)):
+        raise DifferenceImageError("Difference produced non-finite residuals")
+    diff_64[valid] = residuals
+    difference = _compact_float_array(diff_64, valid)
 
-    residuals = difference[valid].astype(np.float64)
     center = float(np.median(residuals))
     mad = float(np.median(np.abs(residuals - center)))
     robust_sigma = 1.4826 * mad
     significance = np.full(reference.shape, np.nan, dtype=np.float32)
 
-    if not np.isfinite(robust_sigma) or robust_sigma <= np.finfo(float).eps:
+    if not np.isfinite(robust_sigma) or robust_sigma <= np.finfo(float).tiny:
         return {
             "difference": difference,
             "significance": significance,
@@ -60,23 +75,34 @@ def compare_aligned_images(
             "synthetic": False,
         }
 
-    significance[valid] = ((difference[valid] - center) / robust_sigma).astype(np.float32)
-    locations = np.argwhere(valid & (np.abs(significance) >= sigma_threshold))
-    ranked = sorted(
-        locations,
-        key=lambda point: abs(float(significance[tuple(point)])),
-        reverse=True,
-    )[:max_candidates]
+    sig_residuals = (residuals - center) / robust_sigma
+    sig_64 = np.full(reference.shape, np.nan, dtype=np.float64)
+    sig_64[valid] = sig_residuals
+    significance = _compact_float_array(sig_64, valid)
 
-    candidates = [
-        {
-            "y": int(y),
-            "x": int(x),
-            "significance": float(significance[y, x]),
-            "difference": float(difference[y, x]),
-        }
-        for y, x in ranked
-    ]
+    valid_y, valid_x = np.nonzero(valid)
+    exceed = np.abs(sig_residuals) >= sigma_threshold
+    hit_count = int(np.count_nonzero(exceed))
+
+    candidates: list[dict[str, float | int]] = []
+    if hit_count > 0:
+        hit_idx = np.flatnonzero(exceed)
+        scores = np.abs(sig_residuals[hit_idx])
+        if hit_count > max_candidates:
+            top_local = np.argpartition(scores, -max_candidates)[-max_candidates:]
+            top_local = top_local[np.argsort(scores[top_local])[::-1]]
+        else:
+            top_local = np.argsort(scores)[::-1]
+        chosen = hit_idx[top_local]
+        candidates = [
+            {
+                "y": int(valid_y[idx]),
+                "x": int(valid_x[idx]),
+                "significance": float(sig_residuals[idx]),
+                "difference": float(residuals[idx]),
+            }
+            for idx in chosen
+        ]
 
     return {
         "difference": difference,
@@ -84,7 +110,7 @@ def compare_aligned_images(
         "valid_mask": valid,
         "background_offset": center,
         "robust_sigma": robust_sigma,
-        "candidate_count": int(len(locations)),
+        "candidate_count": hit_count,
         "candidates": candidates,
         "status": "completed",
         "synthetic": False,

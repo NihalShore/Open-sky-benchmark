@@ -7,13 +7,18 @@ from __future__ import annotations
 
 import argparse
 import json
-from io import BytesIO
+from pathlib import Path
+import sys
 from typing import Any
 
 from astropy.io import fits
 from astropy.wcs import WCS
 
-from app.services.spherex_cube import discover_cube_products, download_cube
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent
+if str(_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_ROOT))
+
+from app.services.spherex_cube import discover_cube_products, download_cube_file
 
 
 WCS_PREFIXES = (
@@ -26,17 +31,25 @@ def _header_summary(header: fits.Header) -> dict[str, Any]:
     return {
         key: value
         for key, value in header.items()
-        if key.startswith(WCS_PREFIXES) or key in {"BUNIT", "ORDER", "PIXTYPE", "INDXSCHM"}
+        if (key.startswith(WCS_PREFIXES) or key in {"BUNIT", "ORDER", "PIXTYPE", "INDXSCHM"})
+        and isinstance(value, (str, int, float, bool))
     }
 
 
 def _celestial_sample(header: fits.Header) -> dict[str, Any]:
     try:
         wcs = WCS(header).celestial
-        width = header.get("NAXIS1")
-        height = header.get("NAXIS2")
-        if not wcs.has_celestial or not width or not height:
+        if not wcs.has_celestial:
             return {"available": False, "reason": "No usable celestial WCS found"}
+
+        pixel_shape = wcs.pixel_shape
+        if pixel_shape and len(pixel_shape) == 2:
+            width, height = pixel_shape
+        else:
+            width = header.get("NAXIS1")
+            height = header.get("NAXIS2")
+        if not width or not height:
+            return {"available": False, "reason": "No usable celestial dimensions found"}
 
         pixels = {
             "center": ((width - 1) / 2, (height - 1) / 2),
@@ -55,16 +68,24 @@ def _celestial_sample(header: fits.Header) -> dict[str, Any]:
         return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
 
 
-def inspect_product(payload: bytes, product: dict[str, Any]) -> dict[str, Any]:
+def inspect_product(fits_source: bytes | Path, product: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(fits_source, Path):
+        download_bytes = fits_source.stat().st_size
+        source: Any = fits_source
+    else:
+        from io import BytesIO
+
+        download_bytes = len(fits_source)
+        source = BytesIO(fits_source)
+
     report: dict[str, Any] = {
         "product": product,
-        "download_bytes": len(payload),
+        "download_bytes": download_bytes,
         "hdus": [],
     }
-    with fits.open(BytesIO(payload), memmap=False) as hdus:
+    with fits.open(source, memmap=False) as hdus:
         for index, hdu in enumerate(hdus):
-            data = hdu.data
-            shape = list(data.shape) if data is not None else None
+            shape = list(hdu.shape) if getattr(hdu, "shape", None) else None
             item: dict[str, Any] = {
                 "index": index,
                 "name": hdu.name,
@@ -72,10 +93,10 @@ def inspect_product(payload: bytes, product: dict[str, Any]) -> dict[str, Any]:
                 "shape": shape,
                 "header": _header_summary(hdu.header),
             }
-            if hdu.name.upper() == "IMAGE" and data is not None:
+            if hdu.name.upper() == "IMAGE" and shape is not None:
                 item["celestial_wcs"] = _celestial_sample(hdu.header)
-            if hdu.name.upper() == "SPECTRAL_CHANNELS" and data is not None:
-                item["rows"] = len(data)
+            if hdu.name.upper() == "SPECTRAL_CHANNELS" and hdu.data is not None:
+                item["rows"] = len(hdu.data)
                 item["columns"] = list(hdu.columns.names or [])
             report["hdus"].append(item)
     return report
@@ -96,8 +117,8 @@ def main() -> int:
         parser.error("IRSA returned no DR1 All-Sky Cube products for this position")
 
     product = products[0]
-    payload = download_cube(product["access_url"])
-    print(json.dumps(inspect_product(payload, product), indent=2, sort_keys=True))
+    with download_cube_file(product["access_url"]) as cube_path:
+        print(json.dumps(inspect_product(cube_path, product), indent=2, sort_keys=True))
     return 0
 
 

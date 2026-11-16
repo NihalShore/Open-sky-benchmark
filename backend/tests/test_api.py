@@ -1,7 +1,12 @@
+from contextlib import contextmanager
+from pathlib import Path
+
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 
-from app.main import app
 from app import main
+from app.main import app
+from app.services.spherex_cube import CubeDataError, CubeUpstreamError
 
 client = TestClient(app)
 
@@ -21,6 +26,28 @@ def test_search_validates_coordinates():
     )
 
     assert response.status_code == 422
+
+
+def test_search_rejects_unknown_collection():
+    response = client.post(
+        "/api/v1/search",
+        json={"ra_deg": 127.6, "dec_deg": -39.1, "collections": ["unknown_collection"]},
+    )
+
+    assert response.status_code == 422
+
+
+def test_search_maps_upstream_error_to_502(monkeypatch):
+    def failing_search(*args, **kwargs):
+        raise RuntimeError("IRSA unreachable")
+
+    monkeypatch.setattr(main, "search_spherex", failing_search)
+    response = client.post(
+        "/api/v1/search",
+        json={"ra_deg": 127.6, "dec_deg": -39.1},
+    )
+
+    assert response.status_code == 502
 
 
 def test_search_returns_normalized_real_archive_metadata(monkeypatch):
@@ -56,17 +83,18 @@ def test_search_returns_normalized_real_archive_metadata(monkeypatch):
     assert payload["observations"][0]["observation_id"] == "TEST-OBS-001"
 
 
-
 def test_cube_search_uses_dr1_cube_collection_and_returns_provenance(monkeypatch):
     def fake_discovery(ra_deg, dec_deg, radius_arcsec):
         assert (ra_deg, dec_deg, radius_arcsec) == (127.6, -39.1, 30)
-        return [{
-            "observation_id": "Npix4659_cube",
-            "collection": "spherex_dr1_cube",
-            "access_url": "https://irsa.ipac.caltech.edu/example.fits",
-            "source_archive": "NASA/IPAC IRSA",
-            "synthetic": False,
-        }]
+        return [
+            {
+                "observation_id": "Npix4659_cube",
+                "collection": "spherex_dr1_cube",
+                "access_url": "https://irsa.ipac.caltech.edu/example.fits",
+                "source_archive": "NASA/IPAC IRSA",
+                "synthetic": False,
+            }
+        ]
 
     monkeypatch.setattr(main, "discover_cube_products", fake_discovery)
     response = client.get("/api/v1/cube/search?ra_deg=127.6&dec_deg=-39.1")
@@ -84,10 +112,19 @@ def test_cube_preview_returns_png_and_provenance_headers(monkeypatch):
         "wavelength_um": 0.8,
         "coverage_fraction": 0.75,
         "units": "MJy/sr",
+        "flags_nonzero_pixel_count": 4,
     }
-    monkeypatch.setattr(main, "discover_cube_products", lambda *args: [
-        {"access_url": "https://irsa.ipac.caltech.edu/example.fits"}
-    ])
+    monkeypatch.setattr(
+        main,
+        "discover_cube_products",
+        lambda *args: [
+            {
+                "observation_id": "Npix4659\r\nX-Injected: bad",
+                "collection": "spherex_dr1_cube",
+                "access_url": "https://irsa.ipac.caltech.edu/example.fits",
+            }
+        ],
+    )
     monkeypatch.setattr(main, "download_cube", lambda url: b"SIMPLE-fits-fixture")
     monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
     monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\x89PNG\r\n\x1a\nfixture")
@@ -99,8 +136,101 @@ def test_cube_preview_returns_png_and_provenance_headers(monkeypatch):
     assert response.headers["x-spherex-source"] == "NASA/IPAC IRSA"
     assert response.headers["x-spherex-channel"] == "1"
     assert response.headers["x-spherex-wavelength-um"] == "0.8"
+    assert response.headers["x-spherex-flags-nonzero-pixels"] == "4"
+    assert response.headers["x-spherex-observation-id"] == "Npix4659X-Injected: bad"
     assert response.headers["x-spherex-synthetic"] == "false"
 
+
+def test_cube_preview_uses_download_cube_file_when_unpatched(monkeypatch, tmp_path):
+    dummy_path = tmp_path / "cube.fits"
+    dummy_path.write_bytes(b"fixture")
+    cleaned_up = []
+
+    @contextmanager
+    def fake_download_file(url):
+        try:
+            yield dummy_path
+        finally:
+            dummy_path.unlink(missing_ok=True)
+            cleaned_up.append(not dummy_path.exists())
+
+    monkeypatch.setattr(
+        main,
+        "discover_cube_products",
+        lambda *args: [
+            {
+                "observation_id": "Npix4659_cube",
+                "collection": "spherex_dr1_cube",
+                "access_url": "https://irsa.ipac.caltech.edu/example.fits",
+            }
+        ],
+    )
+    monkeypatch.setattr(main, "download_cube_file", fake_download_file)
+    monkeypatch.setattr(
+        main,
+        "inspect_cube",
+        lambda path, channel: (
+            {
+                "channel_number": channel + 1,
+                "wavelength_um": 1.2,
+                "coverage_fraction": 0.5,
+                "units": "MJy/sr",
+                "flags_nonzero_pixel_count": 0,
+            },
+            object(),
+        ),
+    )
+    monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\x89PNG\r\n\x1a\nfixture")
+
+    main._preview_cache.clear()
+    response = client.get("/api/v1/cube/preview?ra_deg=127.6&dec_deg=-39.1&channel_index=2")
+
+    assert response.status_code == 200
+    assert cleaned_up == [True]
+    assert response.headers["x-spherex-channel"] == "3"
+    main._preview_cache.clear()
+
+
+def test_cube_preview_rejects_channel_over_101():
+    response = client.get("/api/v1/cube/preview?ra_deg=127.6&dec_deg=-39.1&channel_index=102")
+    assert response.status_code == 422
+
+
+def test_cube_preview_maps_upstream_error_to_502(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "discover_cube_products",
+        lambda *args: [{"access_url": "https://irsa.ipac.caltech.edu/example.fits"}],
+    )
+
+    @contextmanager
+    def failing_download(url):
+        raise CubeUpstreamError("IRSA download timed out")
+        yield Path("/unused")
+
+    monkeypatch.setattr(main, "download_cube_file", failing_download)
+
+    response = client.get("/api/v1/cube/preview?ra_deg=127.6&dec_deg=-39.1&channel_index=0")
+
+    assert response.status_code == 502
+
+
+def test_cube_preview_maps_validation_error_to_422(monkeypatch):
+    monkeypatch.setattr(
+        main,
+        "discover_cube_products",
+        lambda *args: [{"access_url": "https://irsa.ipac.caltech.edu/example.fits"}],
+    )
+    monkeypatch.setattr(main, "download_cube", lambda url: b"SIMPLE-fits-fixture")
+
+    def bad_cube(payload, channel):
+        raise CubeDataError("Channel 51 is marked blank")
+
+    monkeypatch.setattr(main, "inspect_cube", bad_cube)
+
+    response = client.get("/api/v1/cube/preview?ra_deg=127.6&dec_deg=-39.1&channel_index=50")
+
+    assert response.status_code == 422
 
 
 def test_neowise_search_returns_time_ordered_archive_measurements(monkeypatch):
@@ -117,9 +247,9 @@ def test_neowise_search_returns_time_ordered_archive_measurements(monkeypatch):
 
     def fake_search(ra_deg, dec_deg, radius_arcsec, limit):
         assert (ra_deg, dec_deg, radius_arcsec, limit) == (127.6, -39.1, 15, 25)
-        return fake_detections
+        return fake_detections, True
 
-    monkeypatch.setattr(main, "search_neowise", fake_search)
+    monkeypatch.setattr(main, "search_neowise_with_status", fake_search)
     response = client.get(
         "/api/v1/neowise/search?ra_deg=127.6&dec_deg=-39.1&radius_arcsec=15&limit=25"
     )
@@ -129,6 +259,7 @@ def test_neowise_search_returns_time_ordered_archive_measurements(monkeypatch):
     assert payload["catalog"] == "neowiser_p1bs_psd"
     assert payload["time_field"] == "mjd"
     assert payload["bands"] == ["W1", "W2"]
+    assert payload["truncated"] is True
     assert payload["detections"][0]["mjd"] == 59000.0
     assert payload["synthetic"] is False
 
@@ -148,12 +279,33 @@ def test_cors_allows_production_frontend_and_exposes_fits_headers():
     exposed = response.headers["access-control-expose-headers"].lower()
     assert "x-spherex-wavelength-um" in exposed
     assert "x-spherex-flags-nonzero-pixels" in exposed
+    assert "x-spherex-observation-id" in exposed
 
 
-def test_cors_allows_time_lens_preview_origin():
-    response = client.options(
+def test_cors_allows_project_preview_origin_and_rejects_unrelated_vercel_origin():
+    allowed = client.options(
         "/api/v1/health",
-        headers={"Origin": "https://open-sky-timelens-git-feature-achme-63b5.vercel.app", "Access-Control-Request-Method": "GET"},
+        headers={
+            "Origin": "https://open-sky-timelens-git-feature-achme-63b5.vercel.app",
+            "Access-Control-Request-Method": "GET",
+        },
     )
-    assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"].startswith("https://open-sky-timelens-")
+    assert allowed.status_code == 200
+    assert allowed.headers["access-control-allow-origin"].startswith("https://open-sky-timelens-")
+
+    unrelated = client.options(
+        "/api/v1/health",
+        headers={
+            "Origin": "https://open-sky-timelens-evil.vercel.app",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert "access-control-allow-origin" not in unrelated.headers
+
+
+def test_cors_env_override_disables_preview_regex(monkeypatch):
+    monkeypatch.setenv("TIMELENS_CORS_ORIGINS", "https://custom.example.org")
+    cors_kwargs = main._cors_config()
+    assert cors_kwargs["allow_origins"] == ["https://custom.example.org"]
+    assert cors_kwargs["allow_origin_regex"] is None
+    assert CORSMiddleware is not None

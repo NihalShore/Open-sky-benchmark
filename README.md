@@ -69,7 +69,7 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
 The frontend and API are separate Vercel projects. The frontend uses the web directory; the FastAPI service uses the backend directory. The browser API base is open-sky-timelens-api.vercel.app.
 
 
-**Requirements:** Python 3.11 recommended. Install and run from the `backend/` directory.
+**Requirements:** Python 3.11+ (CI tests Python 3.13). Install and run from the `backend/` directory.
 
 ```bash
 cd backend
@@ -144,17 +144,18 @@ Inputs must already have compatible units and photometric calibration. The pipel
 
 ```bash
 cd backend
+python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-GitHub Actions is configured to run the backend test suite on relevant pushes and pull requests. The tests use generated FITS fixtures and mocked remote archive calls; live IRSA access remains an external dependency.
+GitHub Actions is configured to run the backend test suite and frontend static/DOM checks on relevant pushes and pull requests. The tests use generated FITS fixtures and mocked remote archive calls; live IRSA access remains an external dependency.
 
 ## Deployment layout
 
-- Frontend: Vercel project open-sky-timelens, root directory web.
-- API: Vercel project open-sky-timelens-api, root directory backend.
-- CORS: TIMELENS_CORS_ORIGINS overrides the default production, preview and local origins.
-- Python: API runtime pinned in backend/.python-version.
+- Frontend: Vercel project `open-sky-timelens`, root directory `web`.
+- API: Vercel project `open-sky-timelens-api`, root directory `backend` (note: scientific Python wheels and full DR1 FITS cubes can strain serverless bundle-size and memory limits; container/VM hosting is recommended for heavy cube workloads).
+- CORS: `TIMELENS_CORS_ORIGINS` overrides the default production, preview, and local origins.
+- Python: API runtime pinned in `backend/.python-version`.
 
 ## Scientific integrity
 
