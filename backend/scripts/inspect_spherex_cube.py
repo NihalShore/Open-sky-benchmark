@@ -6,6 +6,7 @@ Run from the backend directory:
 from __future__ import annotations
 
 import argparse
+from io import BytesIO
 import json
 from typing import Any, BinaryIO
 
@@ -61,7 +62,7 @@ def _celestial_sample(header: fits.Header) -> dict[str, Any]:
 
 def inspect_product(payload: bytes | BinaryIO, product: dict[str, Any]) -> dict[str, Any]:
     if isinstance(payload, (bytes, bytearray)):
-        source = payload
+        source = BytesIO(payload)
         memmap = False
         download_bytes = len(payload)
     else:
