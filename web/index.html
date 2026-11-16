@@ -104,7 +104,7 @@
 <script>
 (() => {
 "use strict";
-const API=(location.hostname==="127.0.0.1"||location.hostname==="localhost")?(location.port==="8000"?location.origin:"http://127.0.0.1:8000"):"https://open-sky-timelens-api.vercel.app";
+const API=(location.hostname==="127.0.0.1"||location.hostname==="localhost")?(location.port==="8000"?location.origin:"http://127.0.0.1:8000"):"https://open-sky-benchmark-production.up.railway.app";
 const $=id=>document.getElementById(id);
 let query=null,cubeFound=false;
 function notice(kind,title,message){const el=document.querySelector(".notice");el.className="notice"+(kind==="error"?" notice-error":"");el.replaceChildren();const b=document.createElement("b"),s=document.createElement("span");b.textContent=title;s.textContent=message;el.append(b,s);}
