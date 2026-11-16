@@ -11,6 +11,7 @@ on:
     branches: [main, "feat/**"]
     paths:
       - "backend/**"
+      - "web/**"
       - ".github/workflows/backend-tests.yml"
 
 permissions:
@@ -53,6 +54,6 @@ jobs:
           scripts = re.findall(r"<script>(.*?)</script>", html, flags=re.DOTALL)
           if not scripts:
               raise SystemExit("No inline frontend script found")
-          Path("/tmp/timelens.js").write_text("\\n".join(scripts), encoding="utf-8")
+          Path("/tmp/timelens.js").write_text("\n".join(scripts), encoding="utf-8")
           PY
           node --check /tmp/timelens.js
