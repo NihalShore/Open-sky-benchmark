@@ -53,6 +53,7 @@ app.add_middleware(
     allow_headers=["Content-Type"],
     expose_headers=[
         "X-SPHEREX-Source", "X-SPHEREX-Product", "X-SPHEREX-Channel",
+        "X-SPHEREX-Observation-Id",
         "X-SPHEREX-Coverage-Fraction", "X-SPHEREX-Units", "X-SPHEREX-Synthetic",
         "X-SPHEREX-Wavelength-Um", "X-SPHEREX-Flags-Nonzero-Pixels",
     ],
@@ -77,6 +78,12 @@ class SearchRequest(BaseModel):
             "spherex_qr3_deep",
         ]
     ] = Field(default_factory=lambda: ["spherex_dr1", "spherex_qr3"], min_length=1)
+
+
+def _safe_header_value(value: object, max_length: int = 128) -> str:
+    """Keep archive metadata safe for HTTP response headers."""
+    text = str(value).replace("\\r", " ").replace("\\n", " ")
+    return text.encode("ascii", errors="ignore").decode("ascii")[:max_length] or "unknown"
 
 
 @app.get("/api/v1/health")
@@ -210,7 +217,15 @@ async def cube_preview(
             if not products:
                 raise HTTPException(status_code=404, detail="No DR1 cube tile covers this position")
             payload = await run_in_threadpool(download_cube, products[0]["access_url"])
-            metadata, plane = await run_in_threadpool(inspect_cube, payload, channel_index)
+            metadata, plane = await run_in_threadpool(
+                inspect_cube,
+                payload,
+                channel_index,
+                ra_deg=ra_deg,
+                dec_deg=dec_deg,
+                radius_arcsec=radius_arcsec,
+            )
+            metadata["observation_id"] = products[0].get("observation_id")
             png = await run_in_threadpool(render_preview_png, plane)
         except HTTPException:
             raise
@@ -228,7 +243,8 @@ async def cube_preview(
         "X-SPHEREX-Product": "DR1 All-Sky Cube",
         "X-SPHEREX-Channel": str(metadata["channel_number"]),
         "X-SPHEREX-Coverage-Fraction": str(metadata["coverage_fraction"]),
-        "X-SPHEREX-Units": str(metadata["units"]),
+        "X-SPHEREX-Units": _safe_header_value(metadata["units"]),
+        "X-SPHEREX-Observation-Id": _safe_header_value(metadata.get("observation_id") or "unknown"),
         "X-SPHEREX-Flags-Nonzero-Pixels": str(metadata.get("flags_nonzero_pixel_count", 0)),
         "X-SPHEREX-Synthetic": "false",
         "Cache-Control": "no-store",
