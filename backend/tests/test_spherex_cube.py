@@ -116,3 +116,46 @@ def test_channel_axis_uses_spectral_wcs_axis_when_shape_is_ambiguous():
     image = np.zeros((10, 102, 102))
 
     assert _channel_axis(image, 102, header) == 2
+
+
+
+def test_download_cube_spools_payload_to_temporary_file(monkeypatch):
+    from app.services import spherex_cube
+
+    class FakeResponse:
+        status_code = 200
+        headers = {"Content-Length": "6"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def raise_for_status(self):
+            return None
+
+        def iter_content(self, chunk_size):
+            yield b"SIMPLE"
+
+    monkeypatch.setattr(spherex_cube.requests, "get", lambda *args, **kwargs: FakeResponse())
+    payload = spherex_cube.download_cube(
+        "https://irsa.ipac.caltech.edu/data/test.fits"
+    )
+    try:
+        assert payload.read(6) == b"SIMPLE"
+    finally:
+        payload.close()
+
+
+def test_inspect_cube_reads_from_spooled_file():
+    from tempfile import SpooledTemporaryFile
+
+    payload = make_cube_fixture()
+    with SpooledTemporaryFile(max_size=1, mode="w+b") as handle:
+        handle.write(payload)
+        handle.seek(0)
+        metadata, plane = inspect_cube(handle, channel_index=0)
+
+    assert metadata["channel_number"] == 1
+    assert np.isnan(plane[0, 0])
