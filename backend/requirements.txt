@@ -1,6 +1,6 @@
 fastapi>=0.115,<1.0
 uvicorn>=0.30,<1.0
-astroquery>=0.4.10,<0.5
+pyvo>=1.6,<2
 astropy>=6.0
 numpy>=1.26
 requests>=2.32,<3.0
