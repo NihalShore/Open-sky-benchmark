@@ -97,7 +97,13 @@ def search_neowise(
         f"CIRCLE('ICRS', {ra_deg:.12f}, {dec_deg:.12f}, {radius_deg:.12f})) = 1 "
         "ORDER BY mjd ASC, scan_id ASC, frame_num ASC"
     )
-    table = new_irsa_client().query_tap(query, maxrec=limit + 1)
+    client = new_irsa_client()
+    try:
+        table = client.query_tap(query, maxrec=limit + 1)
+    finally:
+        close = getattr(client, "close", None)
+        if callable(close):
+            close()
     detections = [normalize_detection(row) for row in table]
     detections = [row for row in detections if row["mjd"] is not None]
     detections.sort(
