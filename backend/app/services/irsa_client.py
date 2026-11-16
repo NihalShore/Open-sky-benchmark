@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import warnings
+from urllib.parse import urljoin, urlparse
 
 import requests
 from astropy import units as u
@@ -21,6 +22,23 @@ class TimedSession(requests.Session):
     def request(self, method, url, **kwargs):
         kwargs.setdefault("timeout", (CONNECT_TIMEOUT, READ_TIMEOUT))
         return super().request(method, url, **kwargs)
+
+    def get_redirect_target(self, response):
+        target = super().get_redirect_target(response)
+        if not target:
+            return None
+        try:
+            parsed = urlparse(urljoin(response.url, target))
+            trusted = (
+                parsed.scheme == "https"
+                and parsed.hostname == "irsa.ipac.caltech.edu"
+                and parsed.port in (None, 443)
+                and parsed.username is None
+                and parsed.password is None
+            )
+        except ValueError:
+            trusted = False
+        return target if trusted else None
 
 
 class IrsaClient:
