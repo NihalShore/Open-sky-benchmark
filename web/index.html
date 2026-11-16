@@ -18,7 +18,7 @@
 <a class="brand" href="#">
 <span class="mark"></span><span><span class="brand-name">OPEN SKY</span><br><span class="brand-sub">SPHEREx TIMELENS</span></span>
 </a>
-<nav class="nav"><a href="#workspace">Explorer</a><a href="#method">Method</a><a href="#sources">Data sources</a><span class="status">● DEMO ENVIRONMENT</span></nav>
+<nav class="nav"><a href="#workspace">Explorer</a><a href="#method">Method</a><a href="#sources">Data sources</a><span class="status">● LIVE ARCHIVE CLIENT</span></nav>
 </header>
 <main class="shell">
 <section class="hero">
@@ -27,9 +27,9 @@
 <p class="hero-copy">Explore the changing infrared sky through time and wavelength. TimeLens brings archive discovery, spectral context and repeatable comparisons into one science-first workspace.</p>
 <div class="hero-foot"><button class="btn" onclick="document.querySelector('#workspace').scrollIntoView({behavior:'smooth'})">Open the explorer ↗</button><small>SPHEREx · 0.75–5.0 μm · 102 reference channels</small></div>
 </section>
-<div class="notice"><b>DEMO DATA</b><span>The images and measurements in this interactive preview are synthetic illustrations — not real SPHEREx observations or evidence of a moving object.</span></div>
+<div class="notice"><b>SCIENCE MODE</b><span>Only NASA/IPAC IRSA archive responses are presented as observations. No synthetic replacement is shown when archive requests fail.</span></div>
 <section id="workspace">
-<div class="section-head"><div><div class="mono">01 / Workspace</div><h2>Explore a sky position</h2></div><p>Coordinate-based demo · local rendering</p></div>
+<div class="section-head"><div><div class="mono">01 / Workspace</div><h2>Explore a sky position</h2></div><p>ICRS coordinates · NASA/IPAC IRSA</p></div>
 <div class="workspace">
 <aside class="card">
 <div class="card-hd"><strong>Observation query</strong><span class="tag">ICRS J2000</span></div>
@@ -40,40 +40,46 @@
 </div>
 <div class="field"><label for="radius">Search radius (arcsec)</label><input id="radius" value="120" inputmode="numeric"></div>
 <div class="field"><label>Data collection</label><input value="SPHEREx reference grid" disabled></div>
-<button id="search" class="btn full">Generate demo view ↗</button>
-<p class="hint">This preview uses a deterministic synthetic sky model. Live IRSA SIA2 discovery is not connected to this static showcase.</p>
+<button id="search" class="btn full">Search NASA archive ↗</button>
+<p class="hint">Searches SPHEREx SIA2 metadata and the DR1 All-Sky Cube collection. The viewer remains empty when the archive is unavailable.</p>
 <div class="archive-box">
 <div class="mono">Data provenance</div>
-<div class="line"><span>Render source</span><span class="tag warn">Synthetic</span></div>
-<div class="line"><span>Live archive</span><span class="tag">Not queried</span></div>
-<div class="line"><span>Sky projection</span><span class="tag">Pixel grid</span></div>
-<div class="line"><span>Calibration</span><span class="tag">Illustrative</span></div>
+<div class="line"><span>Image source</span><span id="source-status" class="tag">Not loaded</span></div>
+<div class="line"><span>Live archive</span><span id="archive-status" class="tag">Pending</span></div>
+<div class="line"><span>Product</span><span id="product-status" class="tag">Not selected</span></div>
+<div class="line"><span>Preview type</span><span class="tag warn">Display only</span></div>
 </div>
 </div>
 </aside>
 <div class="card visual">
-<div class="visual-toolbar"><div class="left"><span class="tag ok">● MODEL READY</span><small id="coord-label">RA 127.69444° / DEC −39.17760°</small></div><small id="view-label">EPOCH A / B</small></div>
+<div class="visual-toolbar"><div class="left"><span id="viewer-status" class="tag">● WAITING FOR ARCHIVE</span><small id="coord-label">RA 127.69444° / DEC −39.17760°</small></div><small id="view-label">SPHEREx DR1 · FITS PRODUCT</small></div>
 <div class="visual-content">
-<div class="plane grid-lines"><div class="plane-label">EPOCH A <span> / BASELINE</span></div><canvas id="plane-a"></canvas><div class="crosshair"></div><div class="plane-foot"><span>96 × 96 px · synthetic</span><span>0.75–5.0 μm</span></div></div>
-<div class="plane grid-lines"><div class="plane-label">EPOCH B <span> / FOLLOW-UP</span></div><canvas id="plane-b"></canvas><div class="crosshair"></div><div class="plane-foot"><span>96 × 96 px · synthetic</span><span>0.75–5.0 μm</span></div></div>
+<div class="plane grid-lines"><div class="plane-label">SPHEREx DR1 <span> / FITS CHANNEL</span></div><canvas id="plane-a"></canvas><div class="crosshair"></div><div class="plane-foot"><span>FITS preview · archive-backed</span><span>0.75–5.0 μm</span></div></div>
+<div class="plane grid-lines"><div class="plane-label">ARCHIVE <span> / PROVENANCE</span></div><div id="archive-details" style="padding:46px 15px 12px;color:#9fb2c8;font:10px var(--mono);line-height:2">No archive product loaded.</div></div>
 </div>
 <div class="stats">
-<div class="stat"><label>Channel</label><strong id="stat-channel">42</strong><small>of 102</small></div>
-<div class="stat"><label>Wavelength</label><strong id="stat-wave">2.61</strong><small>micrometres</small></div>
-<div class="stat"><label>Valid pixels</label><strong id="stat-valid">82.4%</strong><small>shared coverage</small></div>
-<div class="stat"><label>Changed cells</label><strong id="stat-changed">1,284</strong><small>model threshold</small></div>
+<div class="stat"><label>Channel</label><strong id="stat-channel">—</strong><small>of 102</small></div>
+<div class="stat"><label>Wavelength</label><strong id="stat-wave">—</strong><small>micrometres</small></div>
+<div class="stat"><label>NHITS coverage</label><strong id="stat-valid">—</strong><small>valid pixels</small></div>
+<div class="stat"><label>FLAGS pixels</label><strong id="stat-changed">—</strong><small>non-zero diagnostics</small></div>
 </div>
 </div>
 </div>
 <div class="card channel-card">
-<div class="channel-top"><strong>Spectral channel inspector</strong><span class="channel-value" id="channel-label">CHANNEL 042 · 2.61 μm</span></div>
-<input id="channel" class="range" type="range" min="0" max="101" value="41">
-<div class="channel-scale"><span>0.75 μm · NIR short</span><span>102 channels</span><span>5.00 μm · NIR long</span></div>
-<svg class="spectrum" viewBox="0 0 900 54" preserveAspectRatio="none" aria-label="Illustrative spectral response"><defs><linearGradient id="spec" x1="0" x2="1"><stop offset="0" stop-color="#6adbd3"/><stop offset=".5" stop-color="#8f8bfa"/><stop offset="1" stop-color="#e4a86f"/></linearGradient></defs><path d="M0 42 C70 39 90 12 150 20 S250 44 300 31 S380 4 440 18 S540 49 610 28 S700 5 760 19 S840 41 900 12" fill="none" stroke="url(#spec)" stroke-width="2"/><path d="M0 42 C70 39 90 12 150 20 S250 44 300 31 S380 4 440 18 S540 49 610 28 S700 5 760 19 S840 41 900 12 L900 54 L0 54Z" fill="url(#spec)" opacity=".08"/><path d="M0 51H900" stroke="#26354c"/></svg>
+<div class="channel-top"><strong>Spectral channel inspector</strong><span class="channel-value" id="channel-label">CHANNEL NOT LOADED</span></div>
+<input id="channel" class="range" type="range" min="0" max="101" value="0" disabled>
+<div class="channel-scale"><span>CHANNEL 001</span><span>102 wavelength channels</span><span>CHANNEL 102</span></div>
+<p class="hint">Wavelength is read from FITS metadata. Blank channels are reported rather than replaced.</p>
 </div>
 </section>
+<section id="archive-results">
+<div class="section-head"><div><div class="mono">02 / Archive records</div><h2>SPHEREx observations</h2></div><p id="observation-count">No query submitted</p></div>
+<div class="card"><div id="observation-list" class="card-body">Archive metadata appears after a successful query.</div></div>
+<div class="section-head"><div><div class="mono">03 / Separate time domain</div><h2>NEOWISE-R single exposures</h2></div><button id="neowise-search" class="btn secondary" disabled>Load NEOWISE measurements</button></div>
+<div class="card"><div id="neowise-list" class="card-body">NEOWISE is a separate mission and instrument. Its dated W1/W2 measurements are reviewed independently of SPHEREx wavelength channels.</div></div>
+</section>
 <section id="method">
-<div class="section-head"><div><div class="mono">02 / Analysis path</div><h2>From query to evidence</h2></div><p>A transparent workflow, not a black box</p></div>
+<div class="section-head"><div><div class="mono">04 / Analysis path</div><h2>From query to evidence</h2></div><p>A transparent workflow, not a black box</p></div>
 <div class="metrics">
 <div class="card metric"><div class="micro">SPECTRAL CONTEXT</div><div class="big">102 <span style="color:var(--cyan)">channels</span></div><p>Reference channel grid spanning the SPHEREx near-infrared range.</p></div>
 <div class="card metric"><div class="micro">TIME DOMAIN</div><div class="big">Multi-epoch</div><p>Compare observations across repeat visits while keeping epoch metadata visible.</p></div>
@@ -86,7 +92,7 @@
 </div>
 </section>
 <section id="sources">
-<div class="section-head"><div><div class="mono">03 / Reference material</div><h2>Built around public data</h2></div><p>Primary archive documentation</p></div>
+<div class="section-head"><div><div class="mono">05 / Reference material</div><h2>Built around public data</h2></div><p>Primary archive documentation</p></div>
 <div class="sources">
 <div class="card source"><div><strong>NASA/IPAC IRSA</strong><p>SPHEREx archive and data access documentation</p></div><a href="https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/" target="_blank" rel="noreferrer">OPEN ↗</a></div>
 <div class="card source"><div><strong>SPHEREx data releases</strong><p>Release contents, products and archive notes</p></div><a href="https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-releases/" target="_blank" rel="noreferrer">OPEN ↗</a></div>
@@ -98,17 +104,23 @@
 </main>
 <div id="toast" class="toast">Demo view refreshed.</div>
 <script>
-const $=id=>document.getElementById(id);
-let channelIndex=41;
-function wavelength(i){return .75+(5-.75)*i/101}
-function seedFrom(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
-function rng(seed){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
-function drawPlane(canvas,seed,epoch){const box=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2),w=Math.max(1,Math.floor(box.width*dpr)),h=Math.max(1,Math.floor(box.height*dpr));canvas.width=w;canvas.height=h;const c=canvas.getContext('2d');c.fillStyle='#070c16';c.fillRect(0,0,w,h);const r=rng(seed),n=110;for(let i=0;i<n;i++){const x=r()*w,y=r()*h,rad=(.5+r()*2.5)*dpr,a=.18+r()*.65;c.beginPath();c.fillStyle=i%7===0?'rgba(112,226,223,'+a+')':'rgba(170,190,220,'+a+')';c.arc(x,y,rad,0,Math.PI*2);c.fill()}for(let i=0;i<16;i++){const x=r()*w,y=r()*h,rad=(8+r()*26)*dpr,g=c.createRadialGradient(x,y,0,x,y,rad);g.addColorStop(0,epoch?'rgba(140,111,240,.22)':'rgba(84,194,210,.22)');g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.fillRect(x-rad,y-rad,rad*2,rad*2)}const cx=w*.5,cy=h*.5;c.strokeStyle='rgba(112,226,223,.2)';c.lineWidth=dpr;c.beginPath();c.arc(cx,cy,Math.min(w,h)*.22,0,Math.PI*2);c.stroke()}
-function refresh(){const ra=Number($('ra').value),dec=Number($('dec').value),radius=Number($('radius').value);if(!Number.isFinite(ra)||ra<0||ra>=360||!Number.isFinite(dec)||dec< -90||dec>90||!Number.isFinite(radius)||radius<=0||radius>1800){toast('Enter valid ICRS coordinates and a radius up to 1,800 arcsec.');return}const seed=seedFrom([ra.toFixed(5),dec.toFixed(5),radius,channelIndex].join('|'));drawPlane($('plane-a'),seed,false);drawPlane($('plane-b'),seed^0x9e3779b9,true);$('coord-label').textContent='RA '+ra.toFixed(5)+'° / DEC '+(dec<0?'−':'')+Math.abs(dec).toFixed(5)+'°';$('stat-channel').textContent=channelIndex+1;$('stat-wave').textContent=wavelength(channelIndex).toFixed(2);$('channel-label').textContent='CHANNEL '+String(channelIndex+1).padStart(3,'0')+' · '+wavelength(channelIndex).toFixed(2)+' μm';$('stat-valid').textContent=(76+rng(seed)()*17).toFixed(1)+'%';$('stat-changed').textContent=Math.floor(520+rng(seed^42)()*1800).toLocaleString();$('view-label').textContent='EPOCH A / B · '+radius+'″';}
-function toast(s){$('toast').textContent=s;$('toast').classList.add('show');clearTimeout(window._toast);window._toast=setTimeout(()=>$('toast').classList.remove('show'),2600)}
-$('search').addEventListener('click',()=>{refresh();toast('Synthetic view updated — no archive query was made.')});
-$('channel').addEventListener('input',e=>{channelIndex=Number(e.target.value);refresh()});
-window.addEventListener('resize',()=>refresh());refresh();
+(() => {
+"use strict";
+const API="https://open-sky-timelens-api.vercel.app",$=id=>document.getElementById(id);
+let query=null,cubeFound=false;
+function notice(kind,title,message){const el=document.querySelector(".notice");el.className="notice"+(kind==="error"?" notice-error":"");el.replaceChildren();const b=document.createElement("b"),s=document.createElement("span");b.textContent=title;s.textContent=message;el.append(b,s);}
+function mjdDate(v){const n=Number(v);return Number.isFinite(n)?new Date((n-40587)*86400000).toISOString().slice(0,10):"Date unavailable";}
+function paramsFor(q){return new URLSearchParams({ra_deg:String(q.ra_deg),dec_deg:String(q.dec_deg),radius_arcsec:String(q.radius_arcsec)});}
+async function api(path,options){const c=new AbortController(),t=setTimeout(()=>c.abort(),60000);try{const r=await fetch(API+path,Object.assign({},options||{},{signal:c.signal}));if(!r.ok){let m="API returned HTTP "+r.status;try{const b=await r.json();if(typeof b.detail==="string")m=b.detail;}catch(_){}throw new Error(m);}return r;}catch(e){if(e.name==="AbortError")throw new Error("The archive request timed out. Try a smaller radius.");throw e;}finally{clearTimeout(t);}}
+function readQuery(){const ra=Number($("ra").value),dec=Number($("dec").value),radius=Number($("radius").value);if(!Number.isFinite(ra)||ra<0||ra>=360)throw new Error("Right ascension must be from 0 to less than 360 degrees.");if(!Number.isFinite(dec)||dec< -90||dec>90)throw new Error("Declination must be between -90 and 90 degrees.");if(!Number.isFinite(radius)||radius<=0||radius>1800)throw new Error("Search radius must be positive and no more than 1,800 arcseconds.");return{ra_deg:ra,dec_deg:dec,radius_arcsec:radius};}
+function observations(items){const box=$("observation-list");box.replaceChildren();$("observation-count").textContent=items.length+" archive record"+(items.length===1?"":"s");if(!items.length){box.textContent="IRSA returned no SPHEREx spectral-image records for this position.";return;}items.slice(0,30).forEach(i=>{const row=document.createElement("div");row.style.cssText="display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:11px";const a=document.createElement("div"),b=document.createElement("div"),c=document.createElement("div"),title=document.createElement("strong"),col=document.createElement("small"),band=document.createElement("strong"),wave=document.createElement("small"),date=document.createElement("strong");title.textContent=i.observation_id||"Observation ID unavailable";col.style.cssText="display:block;color:var(--muted);font:9px var(--mono)";col.textContent=(i.collection||"SPHEREx")+" · "+(i.instrument||i.facility||"Archive product");a.append(title,col);band.textContent=i.bandpass_name||"Band metadata unavailable";wave.style.cssText="display:block;color:var(--muted);font:9px var(--mono)";wave.textContent=i.wavelength_min!=null&&i.wavelength_max!=null?Number(i.wavelength_min).toPrecision(4)+"–"+Number(i.wavelength_max).toPrecision(4)+" μm":"Wavelength unavailable";b.append(band,wave);c.style.textAlign="right";date.textContent=i.observation_start_mjd!=null?mjdDate(i.observation_start_mjd):"Date unavailable";c.append(date);row.append(a,b,c);box.append(row);});}
+function neowise(items){const box=$("neowise-list");box.replaceChildren();if(!items.length){box.textContent="IRSA returned no NEOWISE-R measurements for this position.";return;}items.slice(0,40).forEach(i=>{const row=document.createElement("div");row.style.cssText="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:11px";const date=document.createElement("strong"),mags=document.createElement("span"),quality=document.createElement("small");date.textContent=mjdDate(i.mjd);mags.textContent="W1 "+(i.w1_mag==null?"—":i.w1_mag)+" · W2 "+(i.w2_mag==null?"—":i.w2_mag);quality.style.cssText="font:9px var(--mono);color:var(--muted);text-align:right";quality.textContent="PH "+(i.photometric_quality||"—")+" · CC "+(i.contamination_flags||"—");row.append(date,mags,quality);box.append(row);});const note=document.createElement("p");note.className="hint";note.textContent=items.length+" NEOWISE-R measurements. Catalog artifacts are possible; no moving-object classification is performed.";box.append(note);}
+async function loadChannel(){if(!query||!cubeFound)return;const channel=Number($("channel").value);$("channel-label").textContent="CHANNEL "+String(channel+1).padStart(3,"0")+" · loading";$("viewer-status").textContent="RETRIEVING FITS CHANNEL";try{const p=paramsFor(query);p.set("channel_index",String(channel));const r=await api("/api/v1/cube/preview?"+p.toString()),blob=await r.blob();if(!blob.type.includes("image/png"))throw new Error("API did not return a PNG FITS preview.");const bitmap=await createImageBitmap(blob),canvas=$("plane-a"),ratio=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.max(1,Math.floor(canvas.clientWidth*ratio));canvas.height=Math.max(1,Math.floor(canvas.clientHeight*ratio));const ctx=canvas.getContext("2d");ctx.fillStyle="#070c16";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);const wave=r.headers.get("X-SPHEREX-Wavelength-Um"),coverage=r.headers.get("X-SPHEREX-Coverage-Fraction");$("stat-channel").textContent=r.headers.get("X-SPHEREX-Channel")||String(channel+1);$("stat-wave").textContent=wave?Number(wave).toFixed(3):"not in FITS";$("stat-valid").textContent=coverage?(Number(coverage)*100).toFixed(1)+"%":"—";$("stat-changed").textContent=r.headers.get("X-SPHEREX-Flags-Nonzero-Pixels")||"—";$("channel-label").textContent=wave?"CHANNEL "+String(channel+1).padStart(3,"0")+" · "+Number(wave).toFixed(3)+" μm":"CHANNEL "+String(channel+1).padStart(3,"0")+" · wavelength unavailable";$("source-status").textContent="NASA/IPAC IRSA";$("archive-status").textContent="Retrieved";$("product-status").textContent="DR1 FITS";$("viewer-status").textContent="REAL IRSA FITS PREVIEW";$("archive-details").textContent="Source archive: NASA/IPAC IRSA. Product: SPHEREx DR1 All-Sky Cube. Collection: spherex_dr1_cube. Dataset DOI: 10.26131/IRSA679. This image is a display-only grayscale rendering, not calibrated photometry.";notice("live","ARCHIVE PRODUCT","Displayed plane is a real SPHEREx DR1 FITS channel. It is for visual inspection, not calibrated photometry.");}catch(e){$("viewer-status").textContent="CHANNEL PREVIEW UNAVAILABLE";notice("error","FITS PREVIEW FAILED",e.message);}}
+async function searchArchive(){let q;try{q=readQuery();}catch(e){notice("error","CHECK COORDINATES",e.message);return;}query=q;cubeFound=false;$("search").disabled=true;$("neowise-search").disabled=true;$("channel").disabled=true;$("load-channel").disabled=true;$("coordinate-label").textContent="RA "+q.ra_deg.toFixed(5)+"° / DEC "+q.dec_deg.toFixed(5)+"°";$("viewer-status").textContent="QUERYING NASA/IPAC IRSA";$("observation-list").textContent="Querying SPHEREx SIA2…";$("observation-count").textContent="Archive request running";$("archive-details").textContent="Contacting NASA/IPAC IRSA…";$("stat-channel").textContent=$("stat-wave").textContent=$("stat-valid").textContent=$("stat-changed").textContent="—";notice("live","LIVE ARCHIVE QUERY","Contacting NASA/IPAC IRSA. Results are shown only when returned by the archive.");try{const r=await Promise.allSettled([api("/api/v1/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ra_deg:q.ra_deg,dec_deg:q.dec_deg,radius_arcsec:q.radius_arcsec,collections:["spherex_dr1","spherex_qr3"]})}).then(x=>x.json()),api("/api/v1/cube/search?"+paramsFor(q).toString()).then(x=>x.json())]);let e1=null,e2=null;if(r[0].status==="fulfilled")observations(r[0].value.observations||[]);else{e1=r[0].reason;$("observation-list").textContent="SPHEREx SIA2 failed: "+e1.message;$("observation-count").textContent="SIA2 unavailable";}if(r[1].status==="fulfilled"){cubeFound=(r[1].value.products||[]).length>0;if(cubeFound){$("channel").disabled=false;$("load-channel").disabled=false;await loadChannel();}else{$("viewer-status").textContent="NO DR1 CUBE TILE FOUND";$("archive-details").textContent="No DR1 All-Sky Cube product was returned for this position. No image was substituted.";}}else{e2=r[1].reason;$("viewer-status").textContent="CUBE SEARCH FAILED";$("archive-details").textContent="Cube discovery failed: "+e2.message;}$("neowise-search").disabled=false;if(e1&&e2)notice("error","IRSA UNAVAILABLE","Both archive requests failed. "+e1.message+" No synthetic image has been substituted.");else if(e1)notice("error","SIA2 SEARCH FAILED",e1.message);else if(e2)notice("error","CUBE SEARCH FAILED",e2.message);}catch(e){notice("error","ARCHIVE REQUEST FAILED",e.message);$("viewer-status").textContent="ARCHIVE REQUEST FAILED";}finally{$("search").disabled=false;}}
+async function searchNeowise(){if(!query)return;$("neowise-search").disabled=true;$("neowise-list").textContent="Querying NEOWISE-R…";try{const p=paramsFor(query);p.set("limit","200");const r=await api("/api/v1/neowise/search?"+p.toString()),payload=await r.json();neowise(payload.detections||[]);}catch(e){$("neowise-list").textContent="NEOWISE query failed: "+e.message;notice("error","NEOWISE QUERY FAILED",e.message);}finally{$("neowise-search").disabled=false;}}
+$("search").addEventListener("click",searchArchive);$("channel").addEventListener("change",loadChannel);$("load-channel").addEventListener("click",loadChannel);$("neowise-search").addEventListener("click",searchNeowise);["ra","dec","radius"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")searchArchive();}));
+api("/api/v1/health").then(r=>r.json()).then(()=>{$("service-state").classList.add("ok");$("service-state").querySelector("span").textContent="API ONLINE";$("viewer-status").textContent="READY FOR ARCHIVE QUERY";}).catch(()=>{$("service-state").classList.add("fail");$("service-state").querySelector("span").textContent="API OFFLINE";$("archive-details").textContent="API health check failed. No live archive data is available.";notice("error","API NOT CONNECTED","The TimeLens API did not respond. The viewer will not display simulated data.");});
+})();
 </script>
 </body>
 </html>
