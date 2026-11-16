@@ -5,5 +5,3 @@ astropy>=6.0
 numpy>=1.26
 requests>=2.32,<3.0
 Pillow>=10.0
-pytest>=8.0
-httpx>=0.27

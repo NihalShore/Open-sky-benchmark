@@ -138,6 +138,25 @@ async def search_neowise_sources(
     }
 
 
+@app.get("/api/v1/pipeline/capabilities")
+async def pipeline_capabilities() -> dict:
+    """Describe analysis primitives available from this backend build."""
+    return {
+        "wcs_reprojection": True,
+        "coverage_aware_difference": True,
+        "variance_propagation": True,
+        "psf_matching": False,
+        "photometric_scaling": False,
+        "notes": [
+            "WCS reprojection uses bilinear interpolation onto the reference celestial grid.",
+            "Coverage masks exclude pixels without sufficient finite input support.",
+            "Variance maps can be propagated when supplied for both images; interpolation assumes independent input pixels.",
+            "PSF matching and photometric scaling are not implemented. Inputs must already be compatible and calibrated.",
+            "Paired archive FITS selection and candidate classification are not exposed as a public endpoint.",
+        ],
+    }
+
+
 @app.get("/api/v1/cube/search")
 async def search_cube(
     ra_deg: float = Query(ge=0, lt=360),

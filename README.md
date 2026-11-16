@@ -2,65 +2,85 @@
 
 NASA Space Apps 2026 — Planet X & SPHEREx
 
-Backend for inspecting real SPHEREx and NEOWISE archive data.
-TimeLens helps explore observations across position, time, and wavelength.
-It does not claim to detect or confirm Planet X.
+Open Sky Benchmark is a public exploration workspace for SPHEREx and NEOWISE archive data. TimeLens helps inspect infrared observations across sky position, wavelength, and time. It does not claim to detect or confirm Planet X.
 
-## What works
+## Current components
 
-FastAPI backend on this tree:
+### Web application
 
-- IRSA SIA2 discovery for SPHEREx spectral images (DR1 / QR3)
-- DR1 All-Sky Cube tile search, FITS channel extraction, coverage-masked PNG preview
-- NEOWISE-R single-exposure source search (MJD-ordered, quality fields kept)
-- WCS reprojection of a target image onto a reference grid (bilinear)
-- Coverage-aware difference imaging on aligned planes
-- End-to-end path: reproject → coverage mask → common-valid mask → residual candidates
+The Next.js application in `web/` provides:
 
-All science pixels come from IRSA. Live paths do not invent data.
+- Coordinate-first SPHEREx SIA2 discovery and normalized archive metadata
+- A synthetic 102-channel viewer and blink demonstration, always labelled synthetic
+- A live archive-tools panel for DR1 All-Sky Cube tile discovery and real FITS channel previews
+- NEOWISE-R single-exposure queries with W1/W2 errors and quality flags
+- JSON evidence export with query parameters, observation metadata, preview provenance, returned measurements, and limitations
 
-## What does not work yet
+The web app has no database requirement. Its short-lived metadata cache and search diagnostics are limited to a warm server process.
 
-- No public frontend / blink UI / spectral lab panels
-- No PSF matching or photometric scaling between epochs
-- No uncertainty-map propagation
-- No moving-object classifier
-- Live IRSA downloads are rate-limited and not guaranteed in every environment
+### Python API
 
-## Run
+The FastAPI service in `backend/` provides:
+
+- SPHEREx SIA2 observation discovery
+- DR1 All-Sky Cube tile discovery, bounded FITS validation, channel extraction, and coverage-masked PNG preview
+- NEOWISE-R single-exposure source lookup ordered by MJD
+- WCS reprojection and coverage-aware difference primitives
+- Optional variance-map propagation through squared bilinear interpolation weights
+
+## What is not implemented
+
+- PSF matching, photometric scaling, and background matching
+- Automatic selection and registration of paired archive FITS products in the public blink viewer
+- Covariance propagation for correlated pixels or resampling
+- Source extraction, astrometric association, or moving-object classification
+
+Inputs to WCS comparison must already have compatible units and photometric calibration. Synthetic blink frames and differences are interface demonstrations, not observations or candidate detections. Evidence exports are reproducible records of the queried data and processing state; they do not imply a discovery.
+
+## Run locally
+
+Web application:
+
+```bash
+cd web
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+Set `SPHEREX_BACKEND_URL` in `.env.local` to the FastAPI service URL.
+
+Python API:
 
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-API docs: http://127.0.0.1:8000/docs  
-Health: http://127.0.0.1:8000/api/v1/health
-
-## Tests
+Run backend tests from `backend/`:
 
 ```bash
-cd backend && pytest -q
+python -m pytest -q
 ```
-
-GitHub Actions runs the same suite on pull requests and `feat/**` pushes.
 
 ## Scientific rules
 
-- Preserve original archive products and record provenance
-- Inspect multi-extension FITS; do not assume the primary HDU is science data
-- Respect spatial and wavelength-dependent WCS
-- Compare only compatible data; mask missing coverage explicitly
-- Treat residuals as investigation candidates, not discoveries
-- Label synthetic fixtures clearly; never present them as NASA observations
+- Preserve original archive products and their provenance.
+- Inspect multi-extension FITS products; do not assume the primary HDU contains the science image.
+- Respect spatial and wavelength-dependent WCS.
+- Mask missing coverage explicitly and compare only compatible products.
+- Keep synthetic fixtures distinct from archive observations.
+- Treat residuals as investigation candidates, not discoveries.
 
 ## Official data sources
 
 - [IRSA SPHEREx Data Access](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/)
 - [SPHEREx Data Releases](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-releases/)
-- [IRSA SPHEREx spectral-image tutorial](https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/)
+- [IRSA SPHEREx data products](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-products/)
+- [IRSA NEOWISE archive](https://irsa.ipac.caltech.edu/applications/wise/)
 
 ## License
 

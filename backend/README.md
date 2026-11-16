@@ -1,158 +1,60 @@
-# SPHEREx TimeLens
+# SPHEREx TimeLens API
 
-**NASA Space Apps 2026 — Planet X & SPHEREx**
+FastAPI service for SPHEREx archive discovery, DR1 All-Sky Cube inspection, NEOWISE-R single-exposure queries, and WCS-aware image comparison primitives.
 
-TimeLens is a science-first interface for exploring real SPHEREx infrared observations across sky position, observation time, and wavelength. The project aims to help users inspect changes and understand the evidence behind them. It does not claim to identify Planet X.
+## Run locally
 
-## Current build status
-
-### Implemented on `feat/spherex-first-light`
-
-- FastAPI health endpoint and validated ICRS coordinate search.
-- IRSA SIA2 discovery through Astroquery for DR1 and QR3 spectral-image products.
-- Separate DR1 All-Sky Cube discovery through the documented `spherex_dr1_cube` collection.
-- Bounded FITS download from HTTPS URLs on the official IRSA host; redirects are not followed.
-- FITS validation and extraction from `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS`.
-- Coverage masking from `NHITS > 0`; channel wavelength metadata is read from the documented `WAVELENGTH`, `WL_MIN`, `WL_MAX`, `BANDWIDTH`, `R`, `DETECTOR`, and `SUBCHAN` columns.
-- FITS-header blank-channel check using `BLANKCH`; no-data channels are not silently rendered.
-- Display-only PNG preview with percentile stretch and explicit source/channel/coverage headers.
-- Unit and API contract tests using generated FITS fixtures and mocked archive calls.
-
-### Not implemented or not yet verified
-
-- A successful live end-to-end download from IRSA in this development session.
-- Spatial WCS rendering/reprojection onto a conventional sky grid.
-- Scientific source extraction, photometry, or uncertainty propagation.
-- Cross-epoch registration, blink comparison, or change-candidate scoring.
-- Persistent caching, frontend integration, and deployed hosting.
-
-A GitHub Actions workflow now runs `pytest -q` for backend changes. The connector has not yet returned a workflow run for this branch, so the suite remains **unverified** until a CI result is available. These items are not represented as completed features.
-
-## Run the backend locally
-
-Python 3.10 or newer is recommended.
+Python 3.12 is the deployment target.
 
 ```bash
 cd backend
 python -m venv .venv
-```
-
-Activate the virtual environment, then install dependencies:
-
-```bash
-# macOS / Linux
 source .venv/bin/activate
-
-# Windows PowerShell
-.venv\\Scripts\\Activate.ps1
-
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+pip install -r requirements-dev.txt
+uvicorn app.main:app --reload --port 8000
 ```
 
-Open the interactive API documentation at:
+Health and API documentation:
 
-- http://127.0.0.1:8000/docs
-- Health: http://127.0.0.1:8000/api/v1/health
+- `GET /api/v1/health`
+- `GET /docs`
+- `GET /api/v1/pipeline/capabilities`
 
-## Search for SPHEREx observations
+## Archive endpoints
 
-Example request:
+### SPHEREx SIA2 discovery
+
+`POST /api/v1/search` accepts ICRS coordinates, a radius, and one or more supported DR1/QR3 collections. It returns normalized archive product metadata. SIA2 access URLs identify products; they are not guaranteed to be cutouts centred on the query.
+
+### DR1 All-Sky Cube
+
+- `GET /api/v1/cube/search?ra_deg=...&dec_deg=...`
+- `GET /api/v1/cube/preview?ra_deg=...&dec_deg=...&channel_index=...`
+
+The preview path discovers a tile, validates a bounded FITS download, reads `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS`, rejects channels marked blank, masks pixels where `NHITS = 0`, and returns a display-only PNG. Response headers record source, channel, wavelength (when available), coverage, units, and synthetic status. This is not calibrated photometry or a WCS-projected sky cutout.
+
+### NEOWISE-R
+
+`GET /api/v1/neowise/search` returns NEOWISE-R single-exposure source measurements ordered by MJD. W1/W2 magnitudes, reported uncertainties, SNR, photometric quality, frame quality, and contamination flags are preserved. The table includes low-quality measurements and artifacts; the API does not classify moving objects.
+
+## WCS comparison primitives
+
+`app.services.image_pipeline.compare_wcs_images` reprojects the target image onto the reference celestial WCS, computes finite-pixel coverage support, masks pixels below the configured coverage threshold, and forms a target-minus-reference difference.
+
+When both `reference_variance` and `target_variance` maps are supplied, variance is propagated through bilinear interpolation using squared interpolation weights. The calculation assumes independent input pixel errors. It does not propagate covariance from resampling or correlated detector noise. The returned significance map uses the supplied variance maps and a robust median background offset.
+
+Both images must already be in compatible units and photometrically calibrated. PSF matching, photometric scaling, background matching, source extraction, astrometric association, and moving-object classification are not implemented. A ranked residual is a candidate for follow-up, not a discovery.
+
+## Tests
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/search \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "ra_deg": 127.69444,
-    "dec_deg": -39.17760,
-    "radius_arcsec": 36,
-    "collections": ["spherex_dr1", "spherex_qr3"]
-  }'
+python -m pytest -q
 ```
 
-The endpoint returns SIA2 discovery metadata. An `access_url` identifies an archive product; it is not guaranteed to be a cutout exactly matching the requested search region.
+The test suite uses generated FITS fixtures and mocked archive calls; it does not claim a successful live IRSA response. GitHub Actions installs `requirements-dev.txt` and runs the same suite.
 
-## Explore the DR1 All-Sky Cube
+## Deployment
 
-Find cube tiles for a sky position:
+This folder is the root directory for the separate Vercel FastAPI project. It uses `app/main.py` as the application entry point and `requirements.txt` for runtime dependencies. No database or credentials are required for the public read-only archive endpoints.
 
-```bash
-curl "http://127.0.0.1:8000/api/v1/cube/search?ra_deg=127.69444&dec_deg=-39.17760"
-```
-
-Render one channel from the first matching real FITS tile:
-
-```bash
-curl -o channel-1.png "http://127.0.0.1:8000/api/v1/cube/preview?ra_deg=127.69444&dec_deg=-39.17760&channel_index=0"
-```
-
-The channel index is zero-based (0–101). The PNG is a display preview, not a calibrated photometry product. Response headers report the source, channel, wavelength when present, coverage fraction, and units. The FITS cube's `NHITS` layer is used to mask pixels without input coverage. The cube already has zodiacal light subtracted; TimeLens does not subtract it a second time.
-
-IRSA documents the DR1 cube as 12,288 HEALPix order-5 NESTED tiles, each with 102 channels, and identifies the `IMAGE`, `NHITS`, `FLAGS`, `SPECTRAL_CHANNELS`, and `WCS-WAVE` extensions. The HiPS PNG tree is for visualization only; the FITS cube is used here. See the [official cube product description](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-products/) and [DR1 cube DOI](https://doi.org/10.26131/IRSA679).
-
-Run tests from the `backend` directory:
-
-```bash
-pytest -q
-```
-
-## Explore NEOWISE observations
-
-Search the NEOWISE-R single-exposure source table around an ICRS position:
-
-```bash
-curl "http://127.0.0.1:8000/api/v1/neowise/search?ra_deg=127.69444&dec_deg=-39.17760&radius_arcsec=15"
-```
-
-The response is ordered by Modified Julian Date (MJD) and includes W1/W2 profile-fit magnitudes, uncertainties, signal-to-noise values, and archive quality fields. Results are source-table measurements, not image cutouts. Quality flags are preserved rather than silently filtered; the catalog includes artifacts and low-quality detections, so a returned row is not by itself evidence of a moving object. NEOWISE observed in W1 (3.4 μm) and W2 (4.6 μm).
-
-## WCS image comparison
-
-The backend comparison path is available through `app.services.image_pipeline.compare_wcs_images`. It accepts reference and target image planes with their celestial WCS objects, reprojects the target onto the reference grid, estimates the fraction of bilinear interpolation support backed by finite target pixels, masks insufficiently covered pixels, and runs the target-minus-reference difference engine.
-
-The returned result includes the aligned target, coverage fraction, coverage mask, common-validity mask, difference image, significance plane when measurable, ranked positive/negative residual candidates, and processing flags. The default coverage threshold is 0.999; lower it only when partial interpolation support is acceptable for the analysis.
-
-Example:
-
-```python
-from app.services.image_pipeline import compare_wcs_images
-
-result = compare_wcs_images(
-    reference_image,
-    reference_wcs,
-    target_image,
-    target_wcs,
-    sigma_threshold=5.0,
-)
-```
-
-Both inputs must already use compatible units and photometric calibration. This pipeline does not perform photometric scaling, background matching, PSF matching, uncertainty propagation, or moving-object classification. The coverage fraction describes interpolation support from finite input pixels; it is not an exposure map or an instrument-provided footprint. A residual candidate is a follow-up target, not evidence of a moving object or Planet X.
-
-The difference engine treats zero median absolute deviation as unresolved residual scatter. It does not substitute a standard deviation that could be dominated by sparse outliers. In that case it returns no candidates and reports `no_resolvable_residual_scatter`.
-
-## Scientific data rules
-
-1. Preserve original FITS files; create derived products separately.
-2. Inspect the FITS HDU list. SPHEREx spectral-image products are multi-extension FITS files; do not assume the primary HDU contains the science image.
-3. The official IRSA tutorial identifies `IMAGE`, `FLAGS`, `VARIANCE`, `ZODI`, `EPSF`, and `WCS-WAVE` extensions in an example Level 2 product.
-4. Respect the spatial WCS and the wavelength-dependent WCS. SPHEREx uses linear-variable filters, so wavelength can vary across detector pixels.
-5. Compare like with like. Do not blindly subtract different instruments, spectral responses, or incompatible processing releases.
-6. A difference image is a candidate-generation tool, not proof of motion or a Planet X detection.
-7. An absent Gaia counterpart is not proof that a source is unusual.
-8. Label synthetic fixtures explicitly and never present them as NASA observations.
-
-## Official technical references
-
-- [SPHEREx Data Access at IRSA](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/)
-- [SPHEREx Data Releases](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-releases/)
-- [IRSA tutorial: Introduction to SPHEREx Spectral Images](https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/)
-- [SPHEREx Cutout Tool](https://irsa.ipac.caltech.edu/data/SPHEREx/docs/cutout_tool.html)
-
-## Planned vertical slices
-
-1. **First light:** Search IRSA and return genuine observation metadata. (Implemented.)
-2. **Cube explorer:** Discover DR1 All-Sky Cube tiles, inspect FITS channels, mask missing coverage, and render a preview. (Implemented; live archive execution still needs verification.)
-3. **Spatial rendering:** Apply the cube's spatial WCS and show coordinates correctly on the image.
-4. **Temporal comparison:** Find compatible observations, reproject to a common grid, and display valid-coverage masks.
-5. **Spectral exploration:** Build a wavelength profile from supported data and document its limitations.
-6. **Evidence report:** Explain each flagged change with data provenance, uncertainty, and limitations.
+Live requests depend on IRSA availability and can return no overlapping data or an upstream error. No synthetic values are returned by the archive endpoints.
