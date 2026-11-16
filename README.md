@@ -181,7 +181,8 @@ TimeLens is intentionally conservative about what its outputs mean:
 - [x] DR1 All-Sky Cube tile discovery and channel preview
 - [x] NEOWISE-R single-exposure source query
 - [x] WCS reprojection and coverage-aware difference primitives
-- [ ] Public interactive sky viewer and blink comparison
+- [x] Public interactive archive explorer
+- [ ] Multi-epoch blink comparison
 - [ ] Photometric / PSF matching and uncertainty propagation
 - [ ] Reproducible candidate-evidence report
 
