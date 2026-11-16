@@ -63,3 +63,28 @@ def test_candidate_output_is_capped():
 
     assert result["candidate_count"] == 100
     assert len(result["candidates"]) == 3
+
+
+
+def test_small_physical_flux_units_keep_real_outliers():
+    rng = np.random.default_rng(22)
+    reference = np.zeros((30, 30), dtype=np.float64)
+    target = rng.normal(0.0, 1e-19, (30, 30))
+    target[12, 17] += 1e-15
+
+    result = compare_aligned_images(reference, target, sigma_threshold=5.0)
+
+    assert result["status"] == "completed"
+    assert result["robust_sigma"] > 0.0
+    assert any(item["x"] == 17 and item["y"] == 12 for item in result["candidates"])
+
+
+def test_difference_statistics_do_not_overflow_float32():
+    reference = np.zeros((8, 8), dtype=np.float64)
+    target = np.ones((8, 8), dtype=np.float64)
+    target[3, 3] = 1e39
+
+    result = compare_aligned_images(reference, target)
+
+    assert np.isfinite(result["difference"][3, 3])
+    assert result["difference"][3, 3] == pytest.approx(1e39)
