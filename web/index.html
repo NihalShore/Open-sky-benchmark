@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#080d18">
+<meta name="description" content="SPHEREx TimeLens — an open, science-first workspace for exploring the infrared sky across wavelength and time.">
+<title>SPHEREx TimeLens — Open Sky Benchmark</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+:root{--bg:#080d18;--panel:#0d1524;--panel2:#101c2d;--line:#1e2a3e;--muted:#8c9ab0;--text:#eef3fb;--cyan:#70e2df;--violet:#9a8cff;--amber:#f2bd73;--green:#92d9b5;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Space Grotesk',sans-serif}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.55}button,input{font:inherit}button{cursor:pointer}.shell{max-width:1380px;margin:auto;padding:0 42px}.topbar{height:76px;border-bottom:1px solid rgba(140,154,176,.14);display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text)}.mark{width:34px;height:34px;border:1px solid rgba(112,226,223,.55);border-radius:50%;display:grid;place-items:center;position:relative}.mark:before,.mark:after{content:'';position:absolute;border:1px solid var(--cyan);border-radius:50%;width:21px;height:9px;transform:rotate(-35deg)}.mark:after{transform:rotate(55deg);width:9px;height:21px}.brand-name{font:600 15px var(--display);letter-spacing:.12em}.brand-sub{font:10px var(--mono);color:var(--muted);letter-spacing:.16em;margin-top:1px}.nav{display:flex;align-items:center;gap:28px}.nav a{color:#a8b4c6;text-decoration:none;font-size:12px}.nav a:hover{color:var(--cyan)}.nav .status{border:1px solid var(--line);padding:8px 11px;border-radius:6px;font:10px var(--mono);letter-spacing:.06em;color:var(--green)}.hero{position:relative;padding:82px 0 52px;overflow:hidden}.hero:before{content:'';position:absolute;width:620px;height:620px;right:-130px;top:-200px;background:radial-gradient(circle,rgba(63,128,166,.16),rgba(107,82,171,.07) 42%,transparent 69%);pointer-events:none}.eyebrow{font:10px var(--mono);color:var(--cyan);letter-spacing:.19em;text-transform:uppercase;display:flex;align-items:center;gap:10px}.eyebrow:before{content:'';width:26px;height:1px;background:var(--cyan)}h1{font:500 clamp(45px,6vw,78px)/.99 var(--display);letter-spacing:-.055em;max-width:780px;margin:23px 0 21px}h1 em{font-style:normal;color:var(--cyan)}.hero-copy{max-width:590px;color:#aab7c8;font-size:15px;line-height:1.8}.hero-foot{display:flex;align-items:center;gap:18px;margin-top:30px}.btn{border:1px solid rgba(112,226,223,.55);background:var(--cyan);color:#07121b;padding:12px 17px;border-radius:5px;font:600 12px var(--display);transition:.2s}.btn:hover{transform:translateY(-2px);filter:brightness(1.08)}.btn.secondary{background:transparent;color:var(--text);border-color:var(--line)}.hero-foot small{font:10px var(--mono);color:var(--muted)}.notice{display:flex;gap:10px;align-items:center;padding:12px 15px;border:1px solid rgba(242,189,115,.25);background:rgba(242,189,115,.055);border-radius:6px;color:#e4c99d;font-size:11px;margin:8px 0 35px}.notice b{font:10px var(--mono);letter-spacing:.08em;color:var(--amber)}.section-head{display:flex;justify-content:space-between;align-items:end;margin:38px 0 16px}.section-head h2{font:500 23px var(--display);letter-spacing:-.03em;margin:4px 0}.section-head p{margin:0;color:var(--muted);font-size:12px}.mono{font:10px var(--mono);letter-spacing:.09em;color:var(--muted);text-transform:uppercase}.workspace{display:grid;grid-template-columns:310px 1fr;gap:14px}.card{border:1px solid var(--line);border-radius:8px;background:linear-gradient(145deg,rgba(16,28,45,.96),rgba(11,19,32,.98));overflow:hidden}.card-hd{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.card-hd strong{font:500 13px var(--display)}.card-body{padding:18px}.field{margin-bottom:14px}.field label{display:block;font:10px var(--mono);color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px}.field input{width:100%;border:1px solid #2a3a51;background:#080f1c;color:var(--text);border-radius:5px;padding:11px 12px;outline:none;font:12px var(--mono)}.field input:focus{border-color:var(--cyan)}.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hint{font-size:10px;color:#718198;margin-top:9px}.full{width:100%}.archive-box{margin-top:17px;padding:12px;border-radius:5px;background:#0a1220;border:1px solid var(--line)}.archive-box .line{display:flex;justify-content:space-between;gap:8px;margin:7px 0;font-size:11px}.archive-box .line span:first-child{color:var(--muted)}.tag{font:9px var(--mono);letter-spacing:.06em;border-radius:3px;padding:4px 6px;border:1px solid var(--line);color:#aebcd0}.tag.warn{color:var(--amber);border-color:rgba(242,189,115,.3)}.tag.ok{color:var(--green);border-color:rgba(146,217,181,.3)}.visual{min-height:438px;display:flex;flex-direction:column}.visual-toolbar{display:flex;justify-content:space-between;align-items:center;padding:14px 17px;border-bottom:1px solid var(--line);gap:12px}.visual-toolbar .left{display:flex;align-items:center;gap:9px}.visual-toolbar small{color:var(--muted);font:10px var(--mono)}.visual-content{padding:17px;display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1}.plane{position:relative;min-height:260px;background:#070c16;border:1px solid #25334a;border-radius:5px;overflow:hidden}.plane canvas{width:100%;height:100%;position:absolute;inset:0}.plane-label{position:absolute;left:12px;top:11px;font:10px var(--mono);color:#c0d2e3;z-index:2}.plane-label span{color:var(--cyan)}.plane-foot{position:absolute;bottom:10px;left:12px;right:12px;display:flex;justify-content:space-between;font:9px var(--mono);color:#8392a9;z-index:2}.crosshair{position:absolute;inset:50% auto auto 50%;width:28px;height:28px;transform:translate(-50%,-50%);z-index:2}.crosshair:before,.crosshair:after{content:'';position:absolute;background:rgba(112,226,223,.7)}.crosshair:before{width:28px;height:1px;top:13px}.crosshair:after{width:1px;height:28px;left:13px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 17px 17px}.stat{border:1px solid var(--line);background:#0a1220;border-radius:5px;padding:11px 12px}.stat label{display:block;font:9px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.07em}.stat strong{display:block;font:500 18px var(--display);margin-top:4px}.stat small{font-size:9px;color:#8291a7}.channel-card{margin-top:14px;padding:18px}.channel-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.channel-top strong{font:500 13px var(--display)}.channel-value{font:11px var(--mono);color:var(--cyan)}.range{width:100%;accent-color:var(--cyan)}.channel-scale{display:flex;justify-content:space-between;color:#718198;font:9px var(--mono);margin-top:3px}.spectrum{width:100%;height:54px;margin-top:12px;display:block}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}.metric{padding:18px}.metric .big{font:500 25px var(--display);margin:12px 0 4px}.metric p{font-size:11px;color:var(--muted);margin:0}.metric .micro{font:9px var(--mono);color:var(--cyan);letter-spacing:.1em}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}.step{padding:18px;min-height:150px}.step .num{font:10px var(--mono);color:var(--cyan)}.step h3{font:500 15px var(--display);margin:14px 0 7px}.step p{margin:0;color:var(--muted);font-size:11px;line-height:1.7}.sources{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:15px 0 60px}.source{padding:17px;display:flex;align-items:center;justify-content:space-between;gap:12px}.source strong{font:500 13px var(--display)}.source p{margin:4px 0 0;color:var(--muted);font-size:10px}.source a{color:var(--cyan);font:10px var(--mono);text-decoration:none;white-space:nowrap}.footer{border-top:1px solid var(--line);padding:24px 0 34px;color:#718198;display:flex;justify-content:space-between;font-size:10px}.footer strong{color:#b3c1d4;font:10px var(--mono);letter-spacing:.08em}.toast{position:fixed;bottom:22px;right:22px;background:#142538;border:1px solid rgba(112,226,223,.4);color:#dce9f4;padding:12px 16px;border-radius:6px;box-shadow:0 14px 50px #0008;opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;z-index:20;font-size:12px}.toast.show{opacity:1;transform:none}.grid-lines{background-image:linear-gradient(rgba(67,105,133,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(67,105,133,.08) 1px,transparent 1px);background-size:30px 30px}
+@media(max-width:900px){.shell{padding:0 22px}.workspace{grid-template-columns:1fr}.visual{min-height:350px}.nav{gap:14px}.nav a:not(.status){display:none}}@media(max-width:600px){.shell{padding:0 16px}.hero{padding:58px 0 38px}h1{font-size:50px}.hero-foot{align-items:flex-start;flex-direction:column}.visual-content{grid-template-columns:1fr}.plane{min-height:210px}.stats{grid-template-columns:1fr 1fr}.metrics,.steps,.sources{grid-template-columns:1fr}.section-head{align-items:flex-start;flex-direction:column;gap:5px}.footer{gap:15px;flex-direction:column}.topbar{height:65px}.brand-name{font-size:13px}}
+</style>
+</head>
+<body>
+<header class="shell topbar">
+<a class="brand" href="#">
+<span class="mark"></span><span><span class="brand-name">OPEN SKY</span><br><span class="brand-sub">SPHEREx TIMELENS</span></span>
+</a>
+<nav class="nav"><a href="#workspace">Explorer</a><a href="#method">Method</a><a href="#sources">Data sources</a><span class="status">● DEMO ENVIRONMENT</span></nav>
+</header>
+<main class="shell">
+<section class="hero">
+<div class="eyebrow">An open infrared sky workspace</div>
+<h1>The sky doesn't<br><em>sit still.</em></h1>
+<p class="hero-copy">Explore the changing infrared sky through time and wavelength. TimeLens brings archive discovery, spectral context and repeatable comparisons into one science-first workspace.</p>
+<div class="hero-foot"><button class="btn" onclick="document.querySelector('#workspace').scrollIntoView({behavior:'smooth'})">Open the explorer ↗</button><small>SPHEREx · 0.75–5.0 μm · 102 reference channels</small></div>
+</section>
+<div class="notice"><b>DEMO DATA</b><span>The images and measurements in this interactive preview are synthetic illustrations — not real SPHEREx observations or evidence of a moving object.</span></div>
+<section id="workspace">
+<div class="section-head"><div><div class="mono">01 / Workspace</div><h2>Explore a sky position</h2></div><p>Coordinate-based demo · local rendering</p></div>
+<div class="workspace">
+<aside class="card">
+<div class="card-hd"><strong>Observation query</strong><span class="tag">ICRS J2000</span></div>
+<div class="card-body">
+<div class="field-row">
+<div class="field"><label for="ra">Right ascension</label><input id="ra" value="127.69444" inputmode="decimal"></div>
+<div class="field"><label for="dec">Declination</label><input id="dec" value="-39.17760" inputmode="decimal"></div>
+</div>
+<div class="field"><label for="radius">Search radius (arcsec)</label><input id="radius" value="120" inputmode="numeric"></div>
+<div class="field"><label>Data collection</label><input value="SPHEREx reference grid" disabled></div>
+<button id="search" class="btn full">Generate demo view ↗</button>
+<p class="hint">This preview uses a deterministic synthetic sky model. Live IRSA SIA2 discovery is not connected to this static showcase.</p>
+<div class="archive-box">
+<div class="mono">Data provenance</div>
+<div class="line"><span>Render source</span><span class="tag warn">Synthetic</span></div>
+<div class="line"><span>Live archive</span><span class="tag">Not queried</span></div>
+<div class="line"><span>Sky projection</span><span class="tag">Pixel grid</span></div>
+<div class="line"><span>Calibration</span><span class="tag">Illustrative</span></div>
+</div>
+</div>
+</aside>
+<div class="card visual">
+<div class="visual-toolbar"><div class="left"><span class="tag ok">● MODEL READY</span><small id="coord-label">RA 127.69444° / DEC −39.17760°</small></div><small id="view-label">EPOCH A / B</small></div>
+<div class="visual-content">
+<div class="plane grid-lines"><div class="plane-label">EPOCH A <span> / BASELINE</span></div><canvas id="plane-a"></canvas><div class="crosshair"></div><div class="plane-foot"><span>96 × 96 px · synthetic</span><span>0.75–5.0 μm</span></div></div>
+<div class="plane grid-lines"><div class="plane-label">EPOCH B <span> / FOLLOW-UP</span></div><canvas id="plane-b"></canvas><div class="crosshair"></div><div class="plane-foot"><span>96 × 96 px · synthetic</span><span>0.75–5.0 μm</span></div></div>
+</div>
+<div class="stats">
+<div class="stat"><label>Channel</label><strong id="stat-channel">42</strong><small>of 102</small></div>
+<div class="stat"><label>Wavelength</label><strong id="stat-wave">2.61</strong><small>micrometres</small></div>
+<div class="stat"><label>Valid pixels</label><strong id="stat-valid">82.4%</strong><small>shared coverage</small></div>
+<div class="stat"><label>Changed cells</label><strong id="stat-changed">1,284</strong><small>model threshold</small></div>
+</div>
+</div>
+</div>
+<div class="card channel-card">
+<div class="channel-top"><strong>Spectral channel inspector</strong><span class="channel-value" id="channel-label">CHANNEL 042 · 2.61 μm</span></div>
+<input id="channel" class="range" type="range" min="0" max="101" value="41">
+<div class="channel-scale"><span>0.75 μm · NIR short</span><span>102 channels</span><span>5.00 μm · NIR long</span></div>
+<svg class="spectrum" viewBox="0 0 900 54" preserveAspectRatio="none" aria-label="Illustrative spectral response"><defs><linearGradient id="spec" x1="0" x2="1"><stop offset="0" stop-color="#6adbd3"/><stop offset=".5" stop-color="#8f8bfa"/><stop offset="1" stop-color="#e4a86f"/></linearGradient></defs><path d="M0 42 C70 39 90 12 150 20 S250 44 300 31 S380 4 440 18 S540 49 610 28 S700 5 760 19 S840 41 900 12" fill="none" stroke="url(#spec)" stroke-width="2"/><path d="M0 42 C70 39 90 12 150 20 S250 44 300 31 S380 4 440 18 S540 49 610 28 S700 5 760 19 S840 41 900 12 L900 54 L0 54Z" fill="url(#spec)" opacity=".08"/><path d="M0 51H900" stroke="#26354c"/></svg>
+</div>
+</section>
+<section id="method">
+<div class="section-head"><div><div class="mono">02 / Analysis path</div><h2>From query to evidence</h2></div><p>A transparent workflow, not a black box</p></div>
+<div class="metrics">
+<div class="card metric"><div class="micro">SPECTRAL CONTEXT</div><div class="big">102 <span style="color:var(--cyan)">channels</span></div><p>Reference channel grid spanning the SPHEREx near-infrared range.</p></div>
+<div class="card metric"><div class="micro">TIME DOMAIN</div><div class="big">Multi-epoch</div><p>Compare observations across repeat visits while keeping epoch metadata visible.</p></div>
+<div class="card metric"><div class="micro">DATA INTEGRITY</div><div class="big">Provenance</div><p>Keep archive products, synthetic previews and unverified candidates clearly distinct.</p></div>
+</div>
+<div class="steps">
+<div class="card step"><div class="num">STEP 01</div><h3>Locate the field</h3><p>Query by ICRS coordinates and search radius. Record the selected archive collection and request parameters.</p></div>
+<div class="card step"><div class="num">STEP 02</div><h3>Inspect the spectrum</h3><p>Move through the 102-channel reference grid and inspect wavelength metadata before comparing any measurements.</p></div>
+<div class="card step"><div class="num">STEP 03</div><h3>Compare with care</h3><p>Use coverage-aware differences as investigation candidates. Confirm calibration, WCS and source association before interpretation.</p></div>
+</div>
+</section>
+<section id="sources">
+<div class="section-head"><div><div class="mono">03 / Reference material</div><h2>Built around public data</h2></div><p>Primary archive documentation</p></div>
+<div class="sources">
+<div class="card source"><div><strong>NASA/IPAC IRSA</strong><p>SPHEREx archive and data access documentation</p></div><a href="https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/" target="_blank" rel="noreferrer">OPEN ↗</a></div>
+<div class="card source"><div><strong>SPHEREx data releases</strong><p>Release contents, products and archive notes</p></div><a href="https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-releases/" target="_blank" rel="noreferrer">OPEN ↗</a></div>
+<div class="card source"><div><strong>IRSA tutorials</strong><p>Examples for working with SPHEREx archive data</p></div><a href="https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/" target="_blank" rel="noreferrer">OPEN ↗</a></div>
+<div class="card source"><div><strong>Project repository</strong><p>Open development, methods and implementation</p></div><a href="https://github.com/NihalShore/Open-sky-benchmark" target="_blank" rel="noreferrer">GITHUB ↗</a></div>
+</div>
+</section>
+<footer class="footer"><strong>OPEN SKY BENCHMARK / TIMELENS</strong><span>Independent research prototype · Not affiliated with or endorsed by NASA</span><span>© 2026</span></footer>
+</main>
+<div id="toast" class="toast">Demo view refreshed.</div>
+<script>
+const $=id=>document.getElementById(id);
+let channelIndex=41;
+function wavelength(i){return .75+(5-.75)*i/101}
+function seedFrom(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function rng(seed){return()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}}
+function drawPlane(canvas,seed,epoch){const box=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2),w=Math.max(1,Math.floor(box.width*dpr)),h=Math.max(1,Math.floor(box.height*dpr));canvas.width=w;canvas.height=h;const c=canvas.getContext('2d');c.fillStyle='#070c16';c.fillRect(0,0,w,h);const r=rng(seed),n=110;for(let i=0;i<n;i++){const x=r()*w,y=r()*h,rad=(.5+r()*2.5)*dpr,a=.18+r()*.65;c.beginPath();c.fillStyle=i%7===0?'rgba(112,226,223,'+a+')':'rgba(170,190,220,'+a+')';c.arc(x,y,rad,0,Math.PI*2);c.fill()}for(let i=0;i<16;i++){const x=r()*w,y=r()*h,rad=(8+r()*26)*dpr,g=c.createRadialGradient(x,y,0,x,y,rad);g.addColorStop(0,epoch?'rgba(140,111,240,.22)':'rgba(84,194,210,.22)');g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.fillRect(x-rad,y-rad,rad*2,rad*2)}const cx=w*.5,cy=h*.5;c.strokeStyle='rgba(112,226,223,.2)';c.lineWidth=dpr;c.beginPath();c.arc(cx,cy,Math.min(w,h)*.22,0,Math.PI*2);c.stroke()}
+function refresh(){const ra=Number($('ra').value),dec=Number($('dec').value),radius=Number($('radius').value);if(!Number.isFinite(ra)||ra<0||ra>=360||!Number.isFinite(dec)||dec< -90||dec>90||!Number.isFinite(radius)||radius<=0||radius>1800){toast('Enter valid ICRS coordinates and a radius up to 1,800 arcsec.');return}const seed=seedFrom([ra.toFixed(5),dec.toFixed(5),radius,channelIndex].join('|'));drawPlane($('plane-a'),seed,false);drawPlane($('plane-b'),seed^0x9e3779b9,true);$('coord-label').textContent='RA '+ra.toFixed(5)+'° / DEC '+(dec<0?'−':'')+Math.abs(dec).toFixed(5)+'°';$('stat-channel').textContent=channelIndex+1;$('stat-wave').textContent=wavelength(channelIndex).toFixed(2);$('channel-label').textContent='CHANNEL '+String(channelIndex+1).padStart(3,'0')+' · '+wavelength(channelIndex).toFixed(2)+' μm';$('stat-valid').textContent=(76+rng(seed)()*17).toFixed(1)+'%';$('stat-changed').textContent=Math.floor(520+rng(seed^42)()*1800).toLocaleString();$('view-label').textContent='EPOCH A / B · '+radius+'″';}
+function toast(s){$('toast').textContent=s;$('toast').classList.add('show');clearTimeout(window._toast);window._toast=setTimeout(()=>$('toast').classList.remove('show'),2600)}
+$('search').addEventListener('click',()=>{refresh();toast('Synthetic view updated — no archive query was made.')});
+$('channel').addEventListener('input',e=>{channelIndex=Number(e.target.value);refresh()});
+window.addEventListener('resize',()=>refresh());refresh();
+</script>
+</body>
+</html>
