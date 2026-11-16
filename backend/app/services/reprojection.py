@@ -17,10 +17,11 @@ def reproject_to_reference_grid(
     reference_wcs: WCS,
     output_shape: tuple[int, int],
 ) -> np.ndarray:
-    """Bilinearly sample an image on the pixel grid described by reference_wcs.
+    """Bilinearly sample an image on the reference celestial pixel grid.
 
-    Both WCS objects must describe celestial coordinates. Pixels outside the
-    input image, and output pixels with no finite input support, are NaN.
+    Astropy SkyCoord objects preserve celestial frame and axis-order metadata
+    during the transform. A sample is valid only when every input pixel with
+    a non-zero interpolation weight is finite.
     """
     image = np.asarray(image, dtype=np.float64)
     if image.ndim != 2:
@@ -28,7 +29,10 @@ def reproject_to_reference_grid(
     if (
         not isinstance(output_shape, (tuple, list))
         or len(output_shape) != 2
-        or any(isinstance(size, bool) or not isinstance(size, Integral) or size < 1 for size in output_shape)
+        or any(
+            isinstance(size, bool) or not isinstance(size, Integral) or size < 1
+            for size in output_shape
+        )
     ):
         raise ReprojectionError("output_shape must contain two positive integer dimensions")
     output_shape = tuple(int(size) for size in output_shape)
@@ -38,17 +42,15 @@ def reproject_to_reference_grid(
         target_wcs = reference_wcs.celestial
         if not source_wcs.has_celestial or not target_wcs.has_celestial:
             raise ReprojectionError("Both WCS objects must contain celestial axes")
-
         yy, xx = np.indices(output_shape, dtype=np.float64)
-        world_lon, world_lat = target_wcs.pixel_to_world_values(xx, yy)
-        source_x, source_y = source_wcs.world_to_pixel_values(world_lon, world_lat)
+        sky = target_wcs.pixel_to_world(xx, yy)
+        source_x, source_y = source_wcs.world_to_pixel(sky)
     except ReprojectionError:
         raise
     except Exception as exc:
         raise ReprojectionError(f"Could not transform WCS coordinates: {exc}") from exc
 
     height, width = image.shape
-    # WCS round-trips can put an exact edge pixel a few ulps outside the grid.
     edge_tolerance = 1e-6
     inside = (
         np.isfinite(source_x)
@@ -58,7 +60,7 @@ def reproject_to_reference_grid(
         & (source_x <= width - 1 + edge_tolerance)
         & (source_y <= height - 1 + edge_tolerance)
     )
-    output = np.full(output_shape, np.nan, dtype=np.float32)
+    output = np.full(output_shape, np.nan, dtype=np.float64)
     if not np.any(inside):
         return output
 
@@ -78,14 +80,13 @@ def reproject_to_reference_grid(
         (image[y1, x1], dx * dy),
     )
     numerator = np.zeros(x.shape, dtype=np.float64)
-    denominator = np.zeros(x.shape, dtype=np.float64)
+    complete = np.ones(x.shape, dtype=bool)
     for values, weights in samples:
-        usable = np.isfinite(values) & (weights > 0)
-        numerator[usable] += values[usable] * weights[usable]
-        denominator[usable] += weights[usable]
+        required = weights > 1e-12
+        complete &= ~required | np.isfinite(values)
+        numerator += np.where(required & np.isfinite(values), values * weights, 0.0)
 
-    sampled = np.full(x.shape, np.nan, dtype=np.float32)
-    usable = denominator > 0
-    sampled[usable] = (numerator[usable] / denominator[usable]).astype(np.float32)
+    sampled = np.full(x.shape, np.nan, dtype=np.float64)
+    sampled[complete] = numerator[complete]
     output[inside] = sampled
     return output
