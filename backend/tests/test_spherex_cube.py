@@ -202,53 +202,45 @@ def test_download_cube_file_rejects_gzip_exceeding_max_bytes(monkeypatch):
 
 
 def test_discover_cube_products_sorts_nearest_first(monkeypatch):
-    class FakeClient:
-        def query_sia(self, **kwargs):
-            return [
-                {
-                    "obs_id": "FAR",
-                    "obs_collection": "spherex_dr1_cube",
-                    "s_ra": 128.0,
-                    "s_dec": -39.1,
-                    "access_url": "https://irsa.ipac.caltech.edu/far.fits",
-                },
-                {
-                    "obs_id": "NEAR",
-                    "obs_collection": "spherex_dr1_cube",
-                    "s_ra": 127.6,
-                    "s_dec": -39.1,
-                    "access_url": "https://irsa.ipac.caltech.edu/near.fits",
-                },
-            ]
+    def fake_query_sia(ra, dec, radius, collections, *, maxrec):
+        assert collections == ["spherex_dr1_cube"]
+        assert maxrec == 100
+        return [
+            {
+                "obs_id": "FAR",
+                "obs_collection": "spherex_dr1_cube",
+                "s_ra": 128.0,
+                "s_dec": -39.1,
+                "access_url": "https://irsa.ipac.caltech.edu/far.fits",
+            },
+            {
+                "obs_id": "NEAR",
+                "obs_collection": "spherex_dr1_cube",
+                "s_ra": 127.6,
+                "s_dec": -39.1,
+                "access_url": "https://irsa.ipac.caltech.edu/near.fits",
+            },
+        ]
 
-    @contextmanager
-    def fake_irsa_client():
-        yield FakeClient()
-
-    monkeypatch.setattr(spherex_cube, "irsa_client", fake_irsa_client)
+    monkeypatch.setattr(spherex_cube, "query_sia", fake_query_sia)
     products = discover_cube_products(127.6, -39.1, 30.0)
 
     assert [p["observation_id"] for p in products] == ["NEAR", "FAR"]
 
 
 def test_discover_cube_products_rejects_only_untrusted_urls(monkeypatch):
-    class FakeClient:
-        def query_sia(self, **kwargs):
-            return [
-                {
-                    "obs_id": "BAD",
-                    "obs_collection": "spherex_dr1_cube",
-                    "s_ra": 127.6,
-                    "s_dec": -39.1,
-                    "access_url": "https://evil.example/bad.fits",
-                }
-            ]
+    def fake_query_sia(ra, dec, radius, collections, *, maxrec):
+        return [
+            {
+                "obs_id": "BAD",
+                "obs_collection": "spherex_dr1_cube",
+                "s_ra": 127.6,
+                "s_dec": -39.1,
+                "access_url": "https://evil.example/bad.fits",
+            }
+        ]
 
-    @contextmanager
-    def fake_irsa_client():
-        yield FakeClient()
-
-    monkeypatch.setattr(spherex_cube, "irsa_client", fake_irsa_client)
+    monkeypatch.setattr(spherex_cube, "query_sia", fake_query_sia)
     with pytest.raises(CubeUpstreamError, match="untrusted"):
         discover_cube_products(127.6, -39.1, 30.0)
 
