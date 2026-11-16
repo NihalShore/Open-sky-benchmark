@@ -144,6 +144,7 @@ Inputs must already have compatible units and photometric calibration. The pipel
 
 ```bash
 cd backend
+python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
