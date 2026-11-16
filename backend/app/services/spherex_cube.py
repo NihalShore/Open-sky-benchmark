@@ -14,9 +14,11 @@ from urllib.parse import urlparse
 import numpy as np
 import requests
 from astropy.coordinates import SkyCoord
+from astropy.nddata import Cutout2D
 from astropy.io import fits
 from astropy.wcs import WCS
 import astropy.units as u
+from astropy.wcs.utils import skycoord_to_pixel
 from app.services.irsa_client import new_irsa_client
 from PIL import Image
 
@@ -203,7 +205,14 @@ def _channel_value(row: Any, key: str) -> float | int | None:
         return None
 
 
-def inspect_cube(payload: bytes | BinaryIO, channel_index: int) -> tuple[dict[str, Any], np.ndarray]:
+def inspect_cube(
+    payload: bytes | BinaryIO,
+    channel_index: int,
+    *,
+    ra_deg: float | None = None,
+    dec_deg: float | None = None,
+    radius_arcsec: float = 30,
+) -> tuple[dict[str, Any], np.ndarray]:
     """Read one channel from a DR1 cube without materializing the full cube."""
     if channel_index < 0:
         raise CubeDataError("channel_index must be non-negative")
@@ -278,6 +287,29 @@ def inspect_cube(payload: bytes | BinaryIO, channel_index: int) -> tuple[dict[st
 
         coverage = (hits > 0) & np.isfinite(plane)
         plane[~coverage] = np.nan
+
+        if ra_deg is not None or dec_deg is not None:
+            if ra_deg is None or dec_deg is None:
+                raise CubeDataError("Both cutout coordinates are required")
+            try:
+                celestial_wcs = WCS(image_hdu.header).celestial
+                if not celestial_wcs.has_celestial:
+                    raise CubeDataError("Cube does not contain a usable celestial WCS")
+                position = SkyCoord(ra=ra_deg, dec=dec_deg, unit="deg", frame="icrs")
+                cutout = Cutout2D(
+                    plane,
+                    position=position,
+                    size=(2 * radius_arcsec * u.arcsec, 2 * radius_arcsec * u.arcsec),
+                    wcs=celestial_wcs,
+                    mode="partial",
+                    fill_value=np.nan,
+                )
+                plane = np.asarray(cutout.data, dtype=np.float32)
+            except CubeDataError:
+                raise
+            except Exception as exc:
+                raise CubeDataError(f"Could not create the requested sky cutout: {exc}") from exc
+
         valid = plane[np.isfinite(plane)]
         metadata = {
             "channel_index": channel_index,
@@ -290,6 +322,11 @@ def inspect_cube(payload: bytes | BinaryIO, channel_index: int) -> tuple[dict[st
             "detector": _channel_value(channels_hdu.data[channel_index], "DETECTOR"),
             "subchannel": _channel_value(channels_hdu.data[channel_index], "SUBCHAN"),
             "image_shape": list(plane.shape),
+            "cutout_center_icrs": (
+                {"ra_deg": float(ra_deg), "dec_deg": float(dec_deg)}
+                if ra_deg is not None and dec_deg is not None else None
+            ),
+            "cutout_radius_arcsec": radius_arcsec if ra_deg is not None else None,
             "valid_pixel_count": int(valid.size),
             "coverage_fraction": float(valid.size / plane.size),
             "units": str(image_hdu.header.get("BUNIT", "unknown")),
