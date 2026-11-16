@@ -131,10 +131,8 @@ Tests use generated FITS fixtures and mocked IRSA calls. They do not require liv
 - [SPHEREx data products](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-products/)
 
 
-## Vercel deployment
+## Railway deployment
 
-Deploy this directory as a separate Vercel project with `backend` as its root directory. Vercel detects the FastAPI application through the top-level `index.py` entrypoint. Python is pinned to `3.13`. No build command or output directory is required.
+The production API runs as a Railway container service from this directory. Keep the service root directory set to `backend` and use the start command configured in Railway. The frontend is a separate Railway service rooted at `web`.
 
-Note: `astropy` + `astroquery` + `numpy` + `Pillow` push serverless unzipped package limits (~250 MB) and DR1 FITS cubes can be hundreds of MiB, so container or dedicated VM hosting is recommended if serverless bundle limits or FITS memory timeouts are hit.
-
-`GET /api/v1/health` is a process check only; it does not query IRSA. Test SIA2 discovery and FITS retrieval separately.
+The API health check confirms process health only; it does not contact IRSA. Verify SIA2 discovery and FITS retrieval separately. Full DR1 FITS cubes can be hundreds of MiB, so the container deployment is preferred over a serverless function for cube downloads.

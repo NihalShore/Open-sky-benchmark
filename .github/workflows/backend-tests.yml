@@ -8,7 +8,7 @@ on:
       - "web/**"
       - ".github/workflows/backend-tests.yml"
   push:
-    branches: [main, "feat/**"]
+    branches: [main, "feat/**", "fix/**", "arena/**"]
     paths:
       - "backend/**"
       - "web/**"
