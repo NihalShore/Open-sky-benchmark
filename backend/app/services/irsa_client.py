@@ -45,7 +45,13 @@ class IrsaClient:
             float(position.icrs.dec.deg),
             float(radius.to_value(u.deg)),
         )
-        return self._sia.search(pos=circle, collection=collection).to_table()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", DALOverflowWarning)
+            results = self._sia.search(pos=circle, collection=collection, maxrec=500)
+            table = results.to_table()
+        if any(issubclass(item.category, DALOverflowWarning) for item in caught):
+            table.meta["QUERY_STATUS"] = "OVERFLOW"
+        return table
 
     def query_tap(self, query: str, *, maxrec: int | None = None):
         """Run a bounded ADQL query and preserve TAP overflow status."""
