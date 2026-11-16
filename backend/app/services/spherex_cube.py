@@ -18,7 +18,6 @@ from astropy.nddata import Cutout2D
 from astropy.io import fits
 from astropy.wcs import WCS
 import astropy.units as u
-from astropy.wcs.utils import skycoord_to_pixel
 from app.services.irsa_client import new_irsa_client
 from PIL import Image
 
