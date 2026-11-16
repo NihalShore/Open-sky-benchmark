@@ -5,6 +5,7 @@ on:
     branches: [main, "feat/**"]
     paths:
       - "backend/**"
+      - "web/**"
       - ".github/workflows/backend-tests.yml"
   push:
     branches: [main, "feat/**"]
@@ -32,6 +33,26 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-      - name: Run test suite
+      - name: Run backend test suite
         working-directory: backend
         run: python -m pytest -q
+      - name: Check inspection script entrypoint
+        working-directory: backend
+        run: python -m scripts.inspect_spherex_cube --help
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check frontend JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          html = Path("web/index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script>(.*?)</script>", html, flags=re.DOTALL)
+          if not scripts:
+              raise SystemExit("No inline frontend script found")
+          Path("/tmp/timelens.js").write_text("\\n".join(scripts), encoding="utf-8")
+          PY
+          node --check /tmp/timelens.js
