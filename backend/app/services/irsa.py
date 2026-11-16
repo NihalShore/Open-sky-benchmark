@@ -107,7 +107,7 @@ def search_spherex(
 ) -> list[dict[str, Any]]:
     """Query real SPHEREx spectral-image products that overlap a sky position.
 
-    Uses the documented Astroquery IRSA SIA2 interface. Search results are
+    Uses the IRSA SIA2 interface through PyVO. Search results are
     metadata records; a returned access_url is not itself a FITS cutout.
     """
     if not np.isfinite(ra_deg) or not 0 <= ra_deg < 360:
@@ -126,8 +126,11 @@ def search_spherex(
     position = SkyCoord(ra=ra_deg, dec=dec_deg, unit="deg", frame="icrs")
     radius = radius_arcsec * u.arcsec
 
-    table = new_irsa_client().query_sia(
-        pos=(position, radius),
-        collection=collections,
-    )
+    client = new_irsa_client()
+    try:
+        table = client.query_sia(pos=(position, radius), collection=collections)
+    finally:
+        close = getattr(client, "close", None)
+        if callable(close):
+            close()
     return [normalize_observation(row) for row in table]
