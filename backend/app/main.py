@@ -1,6 +1,7 @@
 """TimeLens API: SPHEREx archive discovery and cube preview."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Literal
@@ -23,6 +24,7 @@ from app.services.spherex_cube import (
 )
 
 logger = logging.getLogger(__name__)
+_CUBE_PREVIEW_LIMIT = asyncio.Semaphore(2)
 
 app = FastAPI(
     title="SPHEREx TimeLens API",
@@ -199,22 +201,27 @@ async def cube_preview(
     radius_arcsec: float = Query(default=30, gt=0, le=1800),
 ) -> Response:
     """Return a display-only PNG made from a real DR1 FITS cube channel."""
-    try:
-        products = await run_in_threadpool(
-            discover_cube_products, ra_deg, dec_deg, radius_arcsec
-        )
-        if not products:
-            raise HTTPException(status_code=404, detail="No DR1 cube tile covers this position")
-        payload = await run_in_threadpool(download_cube, products[0]["access_url"])
-        metadata, plane = await run_in_threadpool(inspect_cube, payload, channel_index)
-        png = await run_in_threadpool(render_preview_png, plane)
-    except HTTPException:
-        raise
-    except CubeDataError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    except Exception as exc:
-        logger.exception("SPHEREx cube preview failed")
-        raise HTTPException(status_code=502, detail="Could not retrieve or inspect the cube; retry later") from exc
+    async with _CUBE_PREVIEW_LIMIT:
+        payload = None
+        try:
+            products = await run_in_threadpool(
+                discover_cube_products, ra_deg, dec_deg, radius_arcsec
+            )
+            if not products:
+                raise HTTPException(status_code=404, detail="No DR1 cube tile covers this position")
+            payload = await run_in_threadpool(download_cube, products[0]["access_url"])
+            metadata, plane = await run_in_threadpool(inspect_cube, payload, channel_index)
+            png = await run_in_threadpool(render_preview_png, plane)
+        except HTTPException:
+            raise
+        except CubeDataError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception("SPHEREx cube preview failed")
+            raise HTTPException(status_code=502, detail="Could not retrieve or inspect the cube; retry later") from exc
+        finally:
+            if hasattr(payload, "close"):
+                payload.close()
 
     headers = {
         "X-SPHEREX-Source": "NASA/IPAC IRSA",
