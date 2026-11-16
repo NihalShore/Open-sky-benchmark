@@ -25,7 +25,7 @@ def test_timed_session_preserves_explicit_timeout(monkeypatch):
     session = TimedSession()
     captured = {}
 
-    def fake_request(method, url, **kwargs):
+    def fake_request(self, method, url, **kwargs):
         captured.update(kwargs)
         return "response"
 
