@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
+import pytest
 
 from app import main
 from app.main import app
@@ -17,6 +18,19 @@ def test_health_does_not_call_remote_archive():
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
     assert response.json()["archive_check"] == "not_run"
+
+
+def test_benchmark_targets_endpoint_returns_validation_metadata_without_remote_calls():
+    response = client.get("/api/v1/benchmarks/targets?distance_au=500")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ephemeris_check"] == "not_run"
+    assert payload["instrument"]["channels_total"] == 102
+    assert payload["parallax_estimate"]["parallax_arcsec"] == pytest.approx(825.06, abs=0.1)
+    target_ids = {t["id"] for t in payload["validation_targets"]}
+    assert "3I/ATLAS" in target_ids
+    assert "136472" in target_ids
 
 
 def test_search_validates_coordinates():

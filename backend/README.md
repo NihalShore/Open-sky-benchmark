@@ -29,6 +29,7 @@ The browser frontend calls this service from a separate Vercel project. CORS all
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/v1/health` | Process health; does not contact IRSA |
+| GET | `/api/v1/benchmarks/targets` | Validation target suite, band parameters, and 6-month parallax estimator |
 | POST | `/api/v1/search` | SPHEREx spectral-image product discovery through IRSA SIA2 |
 | GET | `/api/v1/cube/search` | DR1 All-Sky Cube tile discovery |
 | GET | `/api/v1/cube/preview` | Display-only PNG from one DR1 cube channel |
@@ -103,6 +104,14 @@ result = compare_wcs_images(
 - The pipeline does not perform photometric scaling, background matching, PSF matching, or uncertainty propagation.
 - The coverage fraction measures bilinear interpolation support from finite target pixels. It is not an exposure map or an instrument-supplied footprint.
 - The algorithm flags image residuals; it does not classify moving objects or confirm an astronomical discovery.
+
+### MEF cutout calibration, forced photometry & parallax benchmarks
+
+`app.services.spherex_mef` provides bounded IRSA cutout streaming (`build_cutout_url`, `download_mef_cutout_file`), Spectral Image MEF calibration (`calibrate_mef`: `IMAGE - ZODI`, `FLAGS` bitmasking, `VARIANCE` checking, FITS alternate WCS `'A'` `CRPIX1A`/`CRPIX2A` $\to$ full-detector `CWAVE`/`CBAND` lookup), and forced aperture or inverse-variance `ePSF` photometry (`extract_forced_photometry` converting `MJy/sr` $\to$ $\mu\text{Jy}$ and AB magnitudes).
+
+`app.services.parallax_benchmark` provides 6-month Earth-orbit parallax geometry (`estimate_six_month_parallax`), curated validation target metadata (`configs/benchmark_targets.json`), and explicitly flagged synthetic ePSF injection-recovery completeness scoring (`inject_synthetic_epsf_source`, `evaluate_injection_recovery`, all tagged `synthetic: True`).
+
+See `../docs/scientific-dossier.md` for full scientific methodology and limitations.
 
 ## Tests
 

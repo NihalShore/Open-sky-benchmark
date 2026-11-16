@@ -16,6 +16,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.services.irsa import ALLOWED_COLLECTION_SET, search_spherex
 from app.services.neowise import search_neowise, search_neowise_with_status
+from app.services.parallax_benchmark import estimate_six_month_parallax, load_benchmark_config
 from app.services.spherex_cube import (
     CubeDataError,
     CubeUpstreamError,
@@ -142,6 +143,26 @@ async def health() -> dict[str, str]:
         "service": "spherex-timelens-api",
         "archive": "IRSA",
         "archive_check": "not_run",
+    }
+
+
+@app.get("/api/v1/benchmarks/targets")
+async def benchmark_targets(
+    distance_au: float = Query(default=400.0, gt=0.1, le=100000.0),
+) -> dict[str, Any]:
+    """Return documented validation targets and 6-month annual parallax geometry."""
+    config = load_benchmark_config()
+    return {
+        "status": "reference_only",
+        "ephemeris_check": "not_run",
+        "synthetic": False,
+        "instrument": config["instrument"],
+        "validation_targets": config["validation_targets"],
+        "parallax_estimate": estimate_six_month_parallax(distance_au),
+        "notice": (
+            "The 102 SPHEREx channels are spectral wavelength bins, not 102 simultaneous "
+            "observation epochs. Single-platform detections do not establish Planet X."
+        ),
     }
 
 

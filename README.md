@@ -98,6 +98,7 @@ The health endpoint checks that the API process is alive. It deliberately does n
 | Method | Endpoint | Purpose |
 |---|---|---|
 | `GET` | `/api/v1/health` | Local process health |
+| `GET` | `/api/v1/benchmarks/targets` | Documented SPHEREx validation targets & 6-month parallax estimate |
 | `POST` | `/api/v1/search` | Search SPHEREx spectral-image products through IRSA SIA2 |
 | `GET` | `/api/v1/cube/search` | Find DR1 All-Sky Cube tiles around an ICRS position |
 | `GET` | `/api/v1/cube/preview` | Return a display-only PNG for one zero-based cube channel |
@@ -170,6 +171,7 @@ TimeLens is intentionally conservative about what its outputs mean:
 
 ## Data sources
 
+- [SPHEREx TimeLens Scientific Research Dossier](docs/scientific-dossier.md) — instrument limits, MEF vs. cube workflow, parallax math, and validation benchmarks
 - [NASA/IPAC IRSA — SPHEREx data access](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/)
 - [SPHEREx data releases](https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-releases/)
 - [IRSA tutorial — Introduction to SPHEREx spectral images](https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/)

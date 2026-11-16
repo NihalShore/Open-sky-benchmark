@@ -1,0 +1,75 @@
+{
+  "challenge": "NASA Space Apps Challenge 2026 — Planet X and SPHEREx",
+  "instrument": {
+    "name": "SPHEREx",
+    "wavelength_range_um": [0.75, 5.0],
+    "channels_total": 102,
+    "bands": [
+      {"band": 1, "wavelength_um": [0.75, 1.09], "resolving_power": 39, "channels": [1, 17]},
+      {"band": 2, "wavelength_um": [1.10, 1.62], "resolving_power": 41, "channels": [18, 34]},
+      {"band": 3, "wavelength_um": [1.63, 2.41], "resolving_power": 41, "channels": [35, 51]},
+      {"band": 4, "wavelength_um": [2.42, 3.82], "resolving_power": 35, "channels": [52, 68]},
+      {"band": 5, "wavelength_um": [3.83, 4.41], "resolving_power": 112, "channels": [69, 85]},
+      {"band": 6, "wavelength_um": [4.42, 5.00], "resolving_power": 128, "channels": [86, 102]}
+    ],
+    "native_pixel_scale_arcsec": 6.15,
+    "detector_shape": [2040, 2040],
+    "nominal_single_pass_5sigma_ab_mag": [18.5, 19.0],
+    "nominal_four_pass_5sigma_ab_mag": 19.7,
+    "dr1_cube_blank_channels": [51, 52]
+  },
+  "validation_targets": [
+    {
+      "id": "3I/ATLAS",
+      "name": "Interstellar Comet 3I/ATLAS",
+      "category": "active_comet",
+      "diagnostic_features": ["H2O ice/gas (1.5-3.0 um)", "CO2 emission (4.26 um)", "CO emission (4.67 um)"],
+      "purpose": "Moving-target trajectory tracking across LVF wavelength exposures and Band 5/6 volatile extraction"
+    },
+    {
+      "id": "136472",
+      "name": "136472 Makemake",
+      "category": "dwarf_planet_tno",
+      "nominal_v_mag": 17.0,
+      "nominal_distance_au": 52.0,
+      "diagnostic_features": ["CH4 absorption bands (1.7, 2.2, 3.3 um)"],
+      "purpose": "Bright TNO reflectance spectrum and slow parallax/proper-motion benchmark"
+    },
+    {
+      "id": "136108",
+      "name": "136108 Haumea",
+      "category": "dwarf_planet_tno",
+      "nominal_v_mag": 17.3,
+      "nominal_distance_au": 50.0,
+      "diagnostic_features": ["Crystalline H2O ice (1.5, 2.0, 3.0 um)"],
+      "purpose": "Water-ice spectral verification in Bands 2-4"
+    },
+    {
+      "id": "136199",
+      "name": "136199 Eris",
+      "category": "dwarf_planet_tno",
+      "nominal_v_mag": 18.7,
+      "nominal_distance_au": 96.0,
+      "diagnostic_features": ["CH4 absorption bands", "Near SPHEREx 5-sigma single-pass limit"],
+      "purpose": "Sensitivity boundary test near single-pass AB magnitude floor"
+    },
+    {
+      "id": "134340",
+      "name": "134340 Pluto",
+      "category": "dwarf_planet_tno",
+      "nominal_v_mag": 14.4,
+      "nominal_distance_au": 35.0,
+      "diagnostic_features": ["CH4 and N2/CO surface ice features"],
+      "purpose": "High-SNR spectral calibration reference"
+    },
+    {
+      "id": "WISE J085510.83-071442.5",
+      "name": "WISE 0855-0714",
+      "category": "cold_brown_dwarf",
+      "nominal_w2_mag": 13.9,
+      "proper_motion_arcsec_yr": 8.1,
+      "diagnostic_features": ["Cold (~250 K) Band 5-6 thermal opacity window", "Large proper motion"],
+      "purpose": "Observational thermal-IR analog for cold sub-Neptune/giant atmospheres in Bands 5-6"
+    }
+  ]
+}
