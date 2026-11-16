@@ -29,7 +29,7 @@ def _plain_value(value: Any) -> Any:
         return None
 
     if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace")
+        return value.decode("utf-8", errors="replace").rstrip("\x00 ")
 
     if isinstance(value, np.generic):
         value = value.item()
@@ -110,6 +110,15 @@ def search_spherex(
     Uses the documented Astroquery IRSA SIA2 interface. Search results are
     metadata records; a returned access_url is not itself a FITS cutout.
     """
+    if not np.isfinite(ra_deg) or not 0 <= ra_deg < 360:
+        raise ValueError("ra_deg must be in [0, 360)")
+    if not np.isfinite(dec_deg) or not -90 <= dec_deg <= 90:
+        raise ValueError("dec_deg must be in [-90, 90]")
+    if not np.isfinite(radius_arcsec) or not 0 < radius_arcsec <= 1800:
+        raise ValueError("radius_arcsec must be in (0, 1800]")
+    collections = list(dict.fromkeys(collections))
+    if not collections:
+        raise ValueError("At least one SPHEREx collection is required")
     invalid = sorted(set(collections) - ALLOWED_COLLECTIONS)
     if invalid:
         raise ValueError(f"Unsupported SPHEREx collection(s): {', '.join(invalid)}")
