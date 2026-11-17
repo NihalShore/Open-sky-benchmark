@@ -53,7 +53,7 @@ Coordinates are ICRS degrees. Right ascension must be in [0, 360), declination i
 
 `GET /api/v1/cube/search?ra_deg=...&dec_deg=...` discovers tiles in the `spherex_dr1_cube` collection.
 
-`GET /api/v1/cube/preview?ra_deg=...&dec_deg=...&channel_index=0` retrieves a bounded FITS product from the official IRSA HTTPS host, validates the required extensions, extracts one channel, applies the `NHITS > 0` coverage mask, and returns a display-only PNG.
+`GET /api/v1/cube/preview?ra_deg=...&dec_deg=...&channel_index=0` retrieves a bounded FITS product from the official IRSA HTTPS host, validates the required extensions, extracts one channel, applies the `NHITS > 0` coverage mask, and returns a display-only PNG. Pass the `access_url` returned by `/api/v1/cube/search` to reuse that discovery result. Add `metadata_only=true` to return the inspected channel metadata as JSON without rendering the PNG.
 
 The zero-based channel index is 0–101. Response headers include source, channel number, wavelength when available, coverage fraction, units, and a synthetic-data flag. The preview is not a calibrated photometry product. The code reads the FITS `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS` extensions; it does not use HiPS PNGs as science input.
 
