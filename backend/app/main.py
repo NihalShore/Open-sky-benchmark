@@ -234,7 +234,7 @@ async def hips_frame(
         )
     except Exception as exc:
         logger.exception("SPHEREx HiPS frame retrieval failed")
-        raise HTTPException(status_code=502, detail="Could not retrieve the IRSA HiPS frame") from exc
+        raise HTTPException(status_code=502, detail=f"IRSA HiPS frame error ({type(exc).__name__}): {str(exc)[:240]}") from exc
 
 
 @app.get("/api/v1/cube/search")
