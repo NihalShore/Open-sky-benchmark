@@ -157,3 +157,51 @@ def test_cors_allows_time_lens_preview_origin():
     )
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"].startswith("https://open-sky-timelens-")
+
+
+def test_cube_preview_reuses_the_discovered_irsa_url(monkeypatch):
+    metadata = {
+        "channel_number": 1,
+        "wavelength_um": 0.8,
+        "coverage_fraction": 0.75,
+        "units": "MJy/sr",
+    }
+    product_url = "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/example.fits"
+
+    def fail_discovery(*args):
+        raise AssertionError("preview should reuse the URL returned by cube search")
+
+    def fake_download(url):
+        assert url == product_url
+        return b"SIMPLE-fits-fixture"
+
+    monkeypatch.setattr(main, "discover_cube_products", fail_discovery)
+    monkeypatch.setattr(main, "download_cube", fake_download)
+    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
+    monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\\x89PNG\\r\\n\\x1a\\nfixture")
+
+    response = client.get(
+        "/api/v1/cube/preview",
+        params={
+            "ra_deg": 127.6,
+            "dec_deg": -39.1,
+            "channel_index": 0,
+            "access_url": product_url,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+
+
+def test_cube_preview_rejects_untrusted_access_url():
+    response = client.get(
+        "/api/v1/cube/preview",
+        params={
+            "ra_deg": 127.6,
+            "dec_deg": -39.1,
+            "access_url": "https://example.com/fake.fits",
+        },
+    )
+
+    assert response.status_code == 422
