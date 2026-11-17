@@ -1,6 +1,10 @@
 name: SPHEREx FITS scientific validation
 
 on:
+  push:
+    paths:
+      - 'backend/scripts/validate_spherex_cube.py'
+      - '.github/workflows/spherex-fits-validation.yml'
   workflow_dispatch:
     inputs:
       ra_deg:
