@@ -286,3 +286,19 @@ def test_hips_frame_proxies_official_png(monkeypatch):
 def test_hips_frame_rejects_invalid_tile_and_channel():
     assert client.get("/api/v1/hips/frame/12288/0").status_code == 422
     assert client.get("/api/v1/hips/frame/9822/102").status_code == 422
+
+
+def test_hips_frame_returns_404_for_unpublished_channel(monkeypatch):
+    class MissingFrame:
+        headers = {}
+
+        def raise_for_status(self):
+            response = main.requests.Response()
+            response.status_code = 404
+            raise main.requests.HTTPError("404 Not Found", response=response)
+
+    monkeypatch.setattr(main.requests, "get", lambda *args, **kwargs: MissingFrame())
+    response = client.get("/api/v1/hips/frame/9822/50")
+
+    assert response.status_code == 404
+    assert "does not publish this HiPS frame" in response.json()["detail"]
