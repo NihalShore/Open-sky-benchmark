@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
@@ -198,6 +198,7 @@ async def cube_preview(
     channel_index: int = Query(default=0, ge=0, le=101),
     radius_arcsec: float = Query(default=30, gt=0, le=1800),
     access_url: str | None = Query(default=None, min_length=1, max_length=2048),
+    metadata_only: bool = Query(default=False),
 ) -> Response:
     """Return a display-only PNG made from a real DR1 FITS cube channel."""
     try:
@@ -212,6 +213,8 @@ async def cube_preview(
             product_url = products[0]["access_url"]
         payload = await run_in_threadpool(download_cube, product_url)
         metadata, plane = await run_in_threadpool(inspect_cube, payload, channel_index)
+        if metadata_only:
+            return JSONResponse(content=metadata)
         png = await run_in_threadpool(render_preview_png, plane)
     except HTTPException:
         raise
