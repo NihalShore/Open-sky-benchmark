@@ -203,6 +203,40 @@ async def hips_metadata() -> dict:
         raise HTTPException(status_code=502, detail="Could not retrieve IRSA HiPS metadata") from exc
 
 
+
+
+@app.get("/api/v1/hips/frame/{tile_id}/{channel_index}")
+async def hips_frame(
+    tile_id: int = Query(ge=0, le=12287),
+    channel_index: int = Query(ge=0, le=101),
+) -> Response:
+    """Proxy one small official IRSA HiPS PNG frame for browser display."""
+    directory = (tile_id // 10000) * 10000
+    frame_url = (
+        "https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube/"
+        f"Norder5/Dir{directory}/Npix{tile_id}_{channel_index}.png"
+    )
+    try:
+        response = await run_in_threadpool(requests.get, frame_url, timeout=20)
+        response.raise_for_status()
+        if not response.headers.get("Content-Type", "").lower().startswith("image/png"):
+            raise ValueError("IRSA HiPS response is not a PNG image")
+        if not response.content.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+            raise ValueError("IRSA HiPS response has an invalid PNG signature")
+        return Response(
+            content=response.content,
+            media_type="image/png",
+            headers={
+                "X-SPHEREX-Source": "NASA/IPAC IRSA",
+                "X-SPHEREX-Display": "HiPS PNG; display only",
+                "Cache-Control": "public, max-age=86400",
+            },
+        )
+    except Exception as exc:
+        logger.exception("SPHEREx HiPS frame retrieval failed")
+        raise HTTPException(status_code=502, detail="Could not retrieve the IRSA HiPS frame") from exc
+
+
 @app.get("/api/v1/cube/search")
 async def search_cube(
     ra_deg: float = Query(ge=0, lt=360),
