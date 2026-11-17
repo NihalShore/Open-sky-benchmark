@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+import requests
 from typing import Literal
 from uuid import uuid4
 
@@ -164,6 +165,42 @@ async def search_neowise_sources(
         ),
         "synthetic": False,
     }
+
+
+
+
+_HIPS_PROPERTIES_URL = "https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube/properties"
+
+
+@app.get("/api/v1/hips/metadata")
+async def hips_metadata() -> dict:
+    """Return official wavelength metadata for the display-only HiPS cube."""
+    try:
+        response = await run_in_threadpool(requests.get, _HIPS_PROPERTIES_URL, timeout=15)
+        response.raise_for_status()
+        properties = {}
+        for line in response.text.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            properties[key.strip()] = value.strip()
+        wavelengths = [
+            float(value) for value in properties["data_cube_crval3_arr"].split()
+        ]
+        if len(wavelengths) != 102:
+            raise ValueError("IRSA HiPS wavelength table does not contain 102 channels")
+        return {
+            "source_archive": "NASA/IPAC IRSA",
+            "hips_url": "https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube",
+            "frame_count": len(wavelengths),
+            "wavelength_um": wavelengths,
+            "display_only": True,
+            "synthetic": False,
+        }
+    except Exception as exc:
+        logger.exception("SPHEREx HiPS metadata retrieval failed")
+        raise HTTPException(status_code=502, detail="Could not retrieve IRSA HiPS metadata") from exc
 
 
 @app.get("/api/v1/cube/search")
