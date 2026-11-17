@@ -20,7 +20,9 @@ from PIL import Image
 
 IRSA_HOST = "irsa.ipac.caltech.edu"
 CUBE_COLLECTION = "spherex_dr1_cube"
-MAX_FITS_BYTES = 300 * 1024 * 1024
+# A DR1 tile carries IMAGE, NHITS, and FLAGS for 102 channels.
+# The full official FITS product can exceed the previous 300 MiB cap.
+MAX_FITS_BYTES = 512 * 1024 * 1024
 REQUEST_TIMEOUT = (10, 90)
 
 
@@ -84,29 +86,34 @@ def _value(row: Any, key: str) -> Any:
 def download_cube(url: str) -> bytes:
     """Download one bounded FITS product without following redirects."""
     safe_url = trusted_cube_url(url)
-    chunks: list[bytes] = []
+    output = BytesIO()
     total = 0
     with requests.get(
         safe_url,
         stream=True,
         timeout=REQUEST_TIMEOUT,
         allow_redirects=False,
-        headers={"User-Agent": "SPHEREx-TimeLens/0.2"},
+        headers={"User-Agent": "SPHEREx-TimeLens/0.3"},
     ) as response:
         response.raise_for_status()
         if 300 <= response.status_code < 400:
             raise CubeDataError("Unexpected redirect from the archive")
         content_length = response.headers.get("Content-Length")
-        if content_length and int(content_length) > MAX_FITS_BYTES:
-            raise CubeDataError("Cube exceeds the configured download limit")
+        if content_length:
+            try:
+                announced_size = int(content_length)
+            except ValueError as exc:
+                raise CubeDataError("Archive returned an invalid Content-Length") from exc
+            if announced_size > MAX_FITS_BYTES:
+                raise CubeDataError("Cube exceeds the configured download limit")
         for chunk in response.iter_content(chunk_size=1024 * 1024):
             if not chunk:
                 continue
             total += len(chunk)
             if total > MAX_FITS_BYTES:
                 raise CubeDataError("Cube exceeds the configured download limit")
-            chunks.append(chunk)
-    payload = b"".join(chunks)
+            output.write(chunk)
+    payload = output.getvalue()
     if not payload.startswith(b"SIMPLE"):
         raise CubeDataError("Archive response is not a FITS file")
     return payload
