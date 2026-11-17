@@ -56,9 +56,10 @@ def test_constant_difference_does_not_report_false_candidates():
 
 
 def test_candidate_output_is_capped():
+    rng = np.random.default_rng(8)
     reference = np.zeros((20, 20))
-    target = np.zeros((20, 20))
-    target[::2, ::2] = 10.0
+    target = rng.normal(0, 0.1, (20, 20))
+    target[::2, ::2] += 10.0
 
     result = compare_aligned_images(reference, target, max_candidates=3)
 
