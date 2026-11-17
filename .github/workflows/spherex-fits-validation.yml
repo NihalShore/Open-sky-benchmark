@@ -27,7 +27,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: spherex-fits-validation
+  group: spherex-fits-validation-direct
   cancel-in-progress: false
 
 jobs:
