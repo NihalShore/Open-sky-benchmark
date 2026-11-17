@@ -12,7 +12,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 
-from app.services.spherex_cube import discover_cube_products, download_cube
+from app.services.spherex_cube import discover_cube_products, download_cube, trusted_cube_url
 
 CHANNELS = 102
 BLANK_CHANNELS = (51, 52)
@@ -193,14 +193,20 @@ def main() -> int:
     parser.add_argument("--ra", type=float, required=True)
     parser.add_argument("--dec", type=float, required=True)
     parser.add_argument("--radius-arcsec", type=float, default=30)
+    parser.add_argument("--access-url", help="Exact IRSA FITS URL; skips archive discovery")
     parser.add_argument("--output", type=Path, default=Path("spherex-validation-report.json"))
     args = parser.parse_args()
     query = {"ra_deg": args.ra, "dec_deg": args.dec, "radius_arcsec": args.radius_arcsec}
-    products = discover_cube_products(args.ra, args.dec, args.radius_arcsec)
-    if not products:
-        parser.error("IRSA returned no DR1 All-Sky Cube product for this position")
-    payload = download_cube(products[0]["access_url"])
-    report = validate(payload, products[0], query)
+    if args.access_url:
+        url = trusted_cube_url(args.access_url)
+        product = {"access_url": url, "observation_id": "hips5_cube-hips_20261026", "collection": "spherex_dr1_cube", "source_archive": "NASA/IPAC IRSA", "synthetic": False}
+    else:
+        products = discover_cube_products(args.ra, args.dec, args.radius_arcsec)
+        if not products:
+            parser.error("IRSA returned no DR1 All-Sky Cube product for this position")
+        product = products[0]
+    payload = download_cube(product["access_url"])
+    report = validate(payload, product, query)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps({
         "status": report["overall_status"],
