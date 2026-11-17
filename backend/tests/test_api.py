@@ -280,7 +280,7 @@ def test_hips_frame_proxies_official_png(monkeypatch):
     assert response.status_code == 200
     assert response.headers["content-type"] == "image/png"
     assert response.headers["x-spherex-source"] == "NASA/IPAC IRSA"
-    assert requested["url"].endswith("/Norder5/Dir0/Npix9822_0.png")
+    assert requested["url"].endswith("/Norder5/Dir0/Npix9822.png")
 
 
 def test_hips_frame_rejects_invalid_tile_and_channel():
