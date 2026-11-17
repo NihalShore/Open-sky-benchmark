@@ -20,6 +20,7 @@ from app.services.spherex_cube import (
     download_cube,
     inspect_cube,
     render_preview_png,
+    trusted_cube_url,
 )
 
 logger = logging.getLogger(__name__)
@@ -196,15 +197,20 @@ async def cube_preview(
     dec_deg: float = Query(ge=-90, le=90),
     channel_index: int = Query(default=0, ge=0, le=101),
     radius_arcsec: float = Query(default=30, gt=0, le=1800),
+    access_url: str | None = Query(default=None, min_length=1, max_length=2048),
 ) -> Response:
     """Return a display-only PNG made from a real DR1 FITS cube channel."""
     try:
-        products = await run_in_threadpool(
-            discover_cube_products, ra_deg, dec_deg, radius_arcsec
-        )
-        if not products:
-            raise HTTPException(status_code=404, detail="No DR1 cube tile covers this position")
-        payload = await run_in_threadpool(download_cube, products[0]["access_url"])
+        if access_url:
+            product_url = trusted_cube_url(access_url)
+        else:
+            products = await run_in_threadpool(
+                discover_cube_products, ra_deg, dec_deg, radius_arcsec
+            )
+            if not products:
+                raise HTTPException(status_code=404, detail="No DR1 cube tile covers this position")
+            product_url = products[0]["access_url"]
+        payload = await run_in_threadpool(download_cube, product_url)
         metadata, plane = await run_in_threadpool(inspect_cube, payload, channel_index)
         png = await run_in_threadpool(render_preview_png, plane)
     except HTTPException:
