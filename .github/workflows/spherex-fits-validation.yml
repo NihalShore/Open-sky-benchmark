@@ -64,6 +64,7 @@ jobs:
             --ra "$RA_DEG" \
             --dec "$DEC_DEG" \
             --radius-arcsec "$RADIUS_ARCSEC" \
+            --access-url "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/hips5_cube/hips_20261026/Norder5/Dir0/Npix9822_cube.fits" \\
             --output spherex-validation-report.json
 
       - name: Upload validation report
