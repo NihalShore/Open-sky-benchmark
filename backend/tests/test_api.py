@@ -238,3 +238,24 @@ def test_cube_preview_metadata_mode_returns_inspected_metadata(monkeypatch):
     assert response.status_code == 200
     assert response.json()["source_archive"] == "NASA/IPAC IRSA"
     assert response.json()["synthetic"] is False
+
+
+def test_hips_metadata_returns_official_102_channel_wavelengths(monkeypatch):
+    class FakeResponse:
+        text = "hips_cube_depth = 102\\ndata_cube_crval3_arr = " + " ".join(
+            str(0.75 + index * 0.04) for index in range(102)
+        )
+
+        def raise_for_status(self):
+            return None
+
+    monkeypatch.setattr(main.requests, "get", lambda *args, **kwargs: FakeResponse())
+    response = client.get("/api/v1/hips/metadata")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["frame_count"] == 102
+    assert len(payload["wavelength_um"]) == 102
+    assert payload["source_archive"] == "NASA/IPAC IRSA"
+    assert payload["display_only"] is True
+    assert payload["synthetic"] is False
