@@ -221,7 +221,7 @@ async def hips_frame(
         response.raise_for_status()
         if not response.headers.get("Content-Type", "").lower().startswith("image/png"):
             raise ValueError("IRSA HiPS response is not a PNG image")
-        if not response.content.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+        if not response.content.startswith(b"\x89PNG\r\n\x1a\n"):
             raise ValueError("IRSA HiPS response has an invalid PNG signature")
         return Response(
             content=response.content,
