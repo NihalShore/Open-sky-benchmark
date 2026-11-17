@@ -60,12 +60,7 @@ jobs:
           RADIUS_ARCSEC: ${{ inputs.radius_arcsec || '30' }}
           PYTHONPATH: .
         run: |
-          python scripts/validate_spherex_cube.py \
-            --ra "$RA_DEG" \
-            --dec "$DEC_DEG" \
-            --radius-arcsec "$RADIUS_ARCSEC" \
-            --access-url "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/hips5_cube/hips_20261026/Norder5/Dir0/Npix9822_cube.fits" \\
-            --output spherex-validation-report.json
+          python scripts/validate_spherex_cube.py --ra "$RA_DEG" --dec "$DEC_DEG" --radius-arcsec "$RADIUS_ARCSEC" --access-url "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/hips5_cube/hips_20261026/Norder5/Dir0/Npix9822_cube.fits" --output spherex-validation-report.json
 
       - name: Upload validation report
         if: always()
