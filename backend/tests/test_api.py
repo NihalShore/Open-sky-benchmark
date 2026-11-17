@@ -205,3 +205,36 @@ def test_cube_preview_rejects_untrusted_access_url():
     )
 
     assert response.status_code == 422
+
+
+def test_cube_preview_metadata_mode_returns_inspected_metadata(monkeypatch):
+    metadata = {
+        "channel_number": 1,
+        "wavelength_um": 0.8,
+        "coverage_fraction": 0.75,
+        "source_archive": "NASA/IPAC IRSA",
+        "synthetic": False,
+    }
+    product_url = "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/example.fits"
+    monkeypatch.setattr(main, "discover_cube_products", lambda *args: [
+        {"access_url": product_url}
+    ])
+    monkeypatch.setattr(main, "download_cube", lambda url: b"SIMPLE-fits-fixture")
+    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
+    monkeypatch.setattr(
+        main, "render_preview_png",
+        lambda plane: (_ for _ in ()).throw(AssertionError("metadata mode should not render PNG")),
+    )
+
+    response = client.get(
+        "/api/v1/cube/preview",
+        params={
+            "ra_deg": 127.6,
+            "dec_deg": -39.1,
+            "metadata_only": "true",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["source_archive"] == "NASA/IPAC IRSA"
+    assert response.json()["synthetic"] is False
