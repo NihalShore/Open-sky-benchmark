@@ -55,9 +55,10 @@ jobs:
       - name: Discover and validate real SPHEREx FITS product
         working-directory: backend
         env:
-          RA_DEG: ${{ inputs.ra_deg }}
-          DEC_DEG: ${{ inputs.dec_deg }}
-          RADIUS_ARCSEC: ${{ inputs.radius_arcsec }}
+          RA_DEG: ${{ inputs.ra_deg || '127.69444' }}
+          DEC_DEG: ${{ inputs.dec_deg || '-39.17760' }}
+          RADIUS_ARCSEC: ${{ inputs.radius_arcsec || '30' }}
+          PYTHONPATH: .
         run: |
           python scripts/validate_spherex_cube.py \
             --ra "$RA_DEG" \
