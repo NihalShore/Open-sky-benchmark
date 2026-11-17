@@ -157,3 +157,132 @@ def test_cors_allows_time_lens_preview_origin():
     )
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"].startswith("https://open-sky-timelens-")
+
+
+def test_cube_preview_reuses_the_discovered_irsa_url(monkeypatch):
+    metadata = {
+        "channel_number": 1,
+        "wavelength_um": 0.8,
+        "coverage_fraction": 0.75,
+        "units": "MJy/sr",
+    }
+    product_url = "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/example.fits"
+
+    def fail_discovery(*args):
+        raise AssertionError("preview should reuse the URL returned by cube search")
+
+    def fake_download(url):
+        assert url == product_url
+        return b"SIMPLE-fits-fixture"
+
+    monkeypatch.setattr(main, "discover_cube_products", fail_discovery)
+    monkeypatch.setattr(main, "download_cube", fake_download)
+    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
+    monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\\x89PNG\\r\\n\\x1a\\nfixture")
+
+    response = client.get(
+        "/api/v1/cube/preview",
+        params={
+            "ra_deg": 127.6,
+            "dec_deg": -39.1,
+            "channel_index": 0,
+            "access_url": product_url,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+
+
+def test_cube_preview_rejects_untrusted_access_url():
+    response = client.get(
+        "/api/v1/cube/preview",
+        params={
+            "ra_deg": 127.6,
+            "dec_deg": -39.1,
+            "access_url": "https://example.com/fake.fits",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_cube_preview_metadata_mode_returns_inspected_metadata(monkeypatch):
+    metadata = {
+        "channel_number": 1,
+        "wavelength_um": 0.8,
+        "coverage_fraction": 0.75,
+        "source_archive": "NASA/IPAC IRSA",
+        "synthetic": False,
+    }
+    product_url = "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/example.fits"
+    monkeypatch.setattr(main, "discover_cube_products", lambda *args: [
+        {"access_url": product_url}
+    ])
+    monkeypatch.setattr(main, "download_cube", lambda url: b"SIMPLE-fits-fixture")
+    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
+    monkeypatch.setattr(
+        main, "render_preview_png",
+        lambda plane: (_ for _ in ()).throw(AssertionError("metadata mode should not render PNG")),
+    )
+
+    response = client.get(
+        "/api/v1/cube/preview",
+        params={
+            "ra_deg": 127.6,
+            "dec_deg": -39.1,
+            "metadata_only": "true",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["source_archive"] == "NASA/IPAC IRSA"
+    assert response.json()["synthetic"] is False
+
+
+def test_hips_metadata_returns_official_102_channel_wavelengths(monkeypatch):
+    class FakeResponse:
+        text = "hips_cube_depth = 102\ndata_cube_crval3_arr = " + " ".join(
+            str(0.75 + index * 0.04) for index in range(102)
+        )
+
+        def raise_for_status(self):
+            return None
+
+    monkeypatch.setattr(main.requests, "get", lambda *args, **kwargs: FakeResponse())
+    response = client.get("/api/v1/hips/metadata")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["frame_count"] == 102
+    assert len(payload["wavelength_um"]) == 102
+    assert payload["source_archive"] == "NASA/IPAC IRSA"
+    assert payload["display_only"] is True
+    assert payload["synthetic"] is False
+
+
+def test_hips_frame_proxies_official_png(monkeypatch):
+    class FakeResponse:
+        headers = {"Content-Type": "image/png"}
+        content = b"\\x89PNG\\r\\n\\x1a\\nfixture"
+
+        def raise_for_status(self):
+            return None
+
+    requested = {}
+    def fake_get(url, **kwargs):
+        requested["url"] = url
+        return FakeResponse()
+
+    monkeypatch.setattr(main.requests, "get", fake_get)
+    response = client.get("/api/v1/hips/frame/9822/0")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.headers["x-spherex-source"] == "NASA/IPAC IRSA"
+    assert requested["url"].endswith("/Norder5/Dir0/Npix9822_0.png")
+
+
+def test_hips_frame_rejects_invalid_tile_and_channel():
+    assert client.get("/api/v1/hips/frame/12288/0").status_code == 422
+    assert client.get("/api/v1/hips/frame/9822/102").status_code == 422

@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from astropy.io import fits
 
+from app.services import spherex_cube
 from app.services.spherex_cube import (
     CubeDataError,
     inspect_cube,
@@ -88,3 +89,29 @@ def test_official_irsa_https_url_is_accepted():
     assert trusted_cube_url(
         "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/test.fits"
     ).startswith("https://irsa.ipac.caltech.edu/")
+
+
+def test_download_cube_accepts_full_tile_over_previous_limit(monkeypatch):
+    class FakeResponse:
+        status_code = 200
+        headers = {"Content-Length": str(301 * 1024 * 1024)}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def raise_for_status(self):
+            return None
+
+        def iter_content(self, chunk_size):
+            yield b"SIMPLE  = fake FITS payload"
+
+    monkeypatch.setattr(spherex_cube.requests, "get", lambda *args, **kwargs: FakeResponse())
+
+    payload = spherex_cube.download_cube(
+        "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/test.fits"
+    )
+
+    assert payload.startswith(b"SIMPLE")

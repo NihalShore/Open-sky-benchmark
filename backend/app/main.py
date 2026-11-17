@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import logging
 import os
+import requests
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
@@ -20,6 +21,7 @@ from app.services.spherex_cube import (
     download_cube,
     inspect_cube,
     render_preview_png,
+    trusted_cube_url,
 )
 
 logger = logging.getLogger(__name__)
@@ -165,6 +167,76 @@ async def search_neowise_sources(
     }
 
 
+
+
+_HIPS_PROPERTIES_URL = "https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube/properties"
+
+
+@app.get("/api/v1/hips/metadata")
+async def hips_metadata() -> dict:
+    """Return official wavelength metadata for the display-only HiPS cube."""
+    try:
+        response = await run_in_threadpool(requests.get, _HIPS_PROPERTIES_URL, timeout=15)
+        response.raise_for_status()
+        properties = {}
+        for line in response.text.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            properties[key.strip()] = value.strip()
+        wavelengths = [
+            float(value) for value in properties["data_cube_crval3_arr"].split()
+        ]
+        if len(wavelengths) != 102:
+            raise ValueError("IRSA HiPS wavelength table does not contain 102 channels")
+        return {
+            "source_archive": "NASA/IPAC IRSA",
+            "hips_url": "https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube",
+            "frame_count": len(wavelengths),
+            "wavelength_um": wavelengths,
+            "display_only": True,
+            "synthetic": False,
+        }
+    except Exception as exc:
+        logger.exception("SPHEREx HiPS metadata retrieval failed")
+        raise HTTPException(status_code=502, detail="Could not retrieve IRSA HiPS metadata") from exc
+
+
+
+
+@app.get("/api/v1/hips/frame/{tile_id}/{channel_index}")
+async def hips_frame(
+    tile_id: int = Path(ge=0, le=12287),
+    channel_index: int = Path(ge=0, le=101),
+) -> Response:
+    """Proxy one small official IRSA HiPS PNG frame for browser display."""
+    directory = (tile_id // 10000) * 10000
+    frame_url = (
+        "https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube/"
+        f"Norder5/Dir{directory}/Npix{tile_id}_{channel_index}.png"
+    )
+    try:
+        response = await run_in_threadpool(requests.get, frame_url, timeout=20)
+        response.raise_for_status()
+        if not response.headers.get("Content-Type", "").lower().startswith("image/png"):
+            raise ValueError("IRSA HiPS response is not a PNG image")
+        if not response.content.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+            raise ValueError("IRSA HiPS response has an invalid PNG signature")
+        return Response(
+            content=response.content,
+            media_type="image/png",
+            headers={
+                "X-SPHEREX-Source": "NASA/IPAC IRSA",
+                "X-SPHEREX-Display": "HiPS PNG; display only",
+                "Cache-Control": "public, max-age=86400",
+            },
+        )
+    except Exception as exc:
+        logger.exception("SPHEREx HiPS frame retrieval failed")
+        raise HTTPException(status_code=502, detail="Could not retrieve the IRSA HiPS frame") from exc
+
+
 @app.get("/api/v1/cube/search")
 async def search_cube(
     ra_deg: float = Query(ge=0, lt=360),
@@ -196,16 +268,24 @@ async def cube_preview(
     dec_deg: float = Query(ge=-90, le=90),
     channel_index: int = Query(default=0, ge=0, le=101),
     radius_arcsec: float = Query(default=30, gt=0, le=1800),
+    access_url: str | None = Query(default=None, min_length=1, max_length=2048),
+    metadata_only: bool = Query(default=False),
 ) -> Response:
     """Return a display-only PNG made from a real DR1 FITS cube channel."""
     try:
-        products = await run_in_threadpool(
-            discover_cube_products, ra_deg, dec_deg, radius_arcsec
-        )
-        if not products:
-            raise HTTPException(status_code=404, detail="No DR1 cube tile covers this position")
-        payload = await run_in_threadpool(download_cube, products[0]["access_url"])
+        if access_url:
+            product_url = trusted_cube_url(access_url)
+        else:
+            products = await run_in_threadpool(
+                discover_cube_products, ra_deg, dec_deg, radius_arcsec
+            )
+            if not products:
+                raise HTTPException(status_code=404, detail="No DR1 cube tile covers this position")
+            product_url = products[0]["access_url"]
+        payload = await run_in_threadpool(download_cube, product_url)
         metadata, plane = await run_in_threadpool(inspect_cube, payload, channel_index)
+        if metadata_only:
+            return JSONResponse(content=metadata)
         png = await run_in_threadpool(render_preview_png, plane)
     except HTTPException:
         raise
