@@ -214,7 +214,7 @@ async def hips_frame(
     directory = (tile_id // 10000) * 10000
     frame_url = (
         "https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_allsky_cube/"
-        f"Norder5/Dir{directory}/Npix{tile_id}_{channel_index}.png"
+        f"Norder5/Dir{directory}/Npix{tile_id}" + (f"_{channel_index}" if channel_index > 0 else "") + ".png"
     )
     try:
         response = await run_in_threadpool(requests.get, frame_url, timeout=20)
