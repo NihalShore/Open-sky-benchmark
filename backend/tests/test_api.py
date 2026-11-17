@@ -242,7 +242,7 @@ def test_cube_preview_metadata_mode_returns_inspected_metadata(monkeypatch):
 
 def test_hips_metadata_returns_official_102_channel_wavelengths(monkeypatch):
     class FakeResponse:
-        text = "hips_cube_depth = 102\\ndata_cube_crval3_arr = " + " ".join(
+        text = "hips_cube_depth = 102\ndata_cube_crval3_arr = " + " ".join(
             str(0.75 + index * 0.04) for index in range(102)
         )
 
