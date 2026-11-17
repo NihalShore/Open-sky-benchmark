@@ -232,6 +232,15 @@ async def hips_frame(
                 "Cache-Control": "public, max-age=86400",
             },
         )
+    except requests.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else 502
+        logger.warning("IRSA HiPS frame request failed: HTTP %s", status)
+        if status == 404:
+            raise HTTPException(
+                status_code=404,
+                detail="IRSA does not publish this HiPS frame for the selected tile and channel",
+            ) from exc
+        raise HTTPException(status_code=502, detail=f"IRSA HiPS returned HTTP {status}") from exc
     except Exception as exc:
         logger.exception("SPHEREx HiPS frame retrieval failed")
         raise HTTPException(status_code=502, detail=f"IRSA HiPS frame error ({type(exc).__name__}): {str(exc)[:240]}") from exc
