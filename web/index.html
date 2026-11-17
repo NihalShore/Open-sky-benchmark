@@ -166,11 +166,12 @@ async function loadChannel(){
    "NHITS / FLAGS: not available from this display PNG.";
  }catch(error){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  $("channel-label").textContent="CHANNEL "+String(idx+1).padStart(3,"0")+" · UNAVAILABLE";
-  $("viewer-status").textContent="HiPS FRAME UNAVAILABLE";
-  $("source-status").textContent="Unavailable";
+  const blankDichroic = idx===50 || idx===51;
+  $("channel-label").textContent="CHANNEL "+String(idx+1).padStart(3,"0")+(blankDichroic?" · KNOWN BLANK":" · UNAVAILABLE");
+  $("viewer-status").textContent=blankDichroic?"KNOWN BLANK CHANNEL":"HiPS FRAME UNAVAILABLE";
+  $("source-status").textContent=blankDichroic?"No frame published":"Unavailable";
   $("source-status").className="tag warn";
-  $("preview-status").textContent="Unavailable";
+  $("preview-status").textContent=blankDichroic?"Known blank":"Unavailable";
   $("preview-status").className="tag warn";
   $("product-status").textContent=cubeProductUrl?"Discovered · not validated":"Not discovered";
   $("product-status").className="tag warn";
@@ -178,11 +179,13 @@ async function loadChannel(){
   $("science-status").className="tag warn";
   $("stat-valid").textContent="N/A";
   $("stat-changed").textContent="N/A";
-  const reason=error.message.includes("404")?"IRSA does not publish this frame for the selected tile.":error.message;
+  const reason=(idx===50 || idx===51)
+   ?"Known blank dichroic channel. IRSA documents channels 51 and 52 as intentionally blank positions in the 102-channel sequence."
+   :(error.message.includes("404")?"IRSA does not publish this frame for the selected tile.":error.message);
   $("archive-details").textContent=
    "Archive: NASA/IPAC IRSA\n"+
    "FITS product: "+(cubeObservationId||"not discovered")+" (not validated)\n"+
-   "Preview: channel "+(idx+1)+" unavailable for this tile\n"+
+   "Preview: "+(idx===50 || idx===51?"known blank dichroic channel ":"channel ")+(idx+1)+"\n"+
    "Reason: "+reason+"\n"+
    "No substitute channel or synthetic image was used.";
   notice("error","CHANNEL UNAVAILABLE",reason);
