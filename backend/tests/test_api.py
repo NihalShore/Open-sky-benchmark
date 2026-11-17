@@ -259,3 +259,30 @@ def test_hips_metadata_returns_official_102_channel_wavelengths(monkeypatch):
     assert payload["source_archive"] == "NASA/IPAC IRSA"
     assert payload["display_only"] is True
     assert payload["synthetic"] is False
+
+
+def test_hips_frame_proxies_official_png(monkeypatch):
+    class FakeResponse:
+        headers = {"Content-Type": "image/png"}
+        content = b"\\x89PNG\\r\\n\\x1a\\nfixture"
+
+        def raise_for_status(self):
+            return None
+
+    requested = {}
+    def fake_get(url, **kwargs):
+        requested["url"] = url
+        return FakeResponse()
+
+    monkeypatch.setattr(main.requests, "get", fake_get)
+    response = client.get("/api/v1/hips/frame/9822/0")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.headers["x-spherex-source"] == "NASA/IPAC IRSA"
+    assert requested["url"].endswith("/Norder5/Dir0/Npix9822_0.png")
+
+
+def test_hips_frame_rejects_invalid_tile_and_channel():
+    assert client.get("/api/v1/hips/frame/12288/0").status_code == 422
+    assert client.get("/api/v1/hips/frame/9822/102").status_code == 422
