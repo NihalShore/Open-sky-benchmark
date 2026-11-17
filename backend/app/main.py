@@ -7,7 +7,7 @@ import requests
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
@@ -207,8 +207,8 @@ async def hips_metadata() -> dict:
 
 @app.get("/api/v1/hips/frame/{tile_id}/{channel_index}")
 async def hips_frame(
-    tile_id: int = Query(ge=0, le=12287),
-    channel_index: int = Query(ge=0, le=101),
+    tile_id: int = Path(ge=0, le=12287),
+    channel_index: int = Path(ge=0, le=101),
 ) -> Response:
     """Proxy one small official IRSA HiPS PNG frame for browser display."""
     directory = (tile_id // 10000) * 10000
