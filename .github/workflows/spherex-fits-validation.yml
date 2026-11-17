@@ -1,0 +1,71 @@
+name: SPHEREx FITS scientific validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      ra_deg:
+        description: ICRS right ascension in degrees
+        required: true
+        default: "127.69444"
+        type: string
+      dec_deg:
+        description: ICRS declination in degrees
+        required: true
+        default: "-39.17760"
+        type: string
+      radius_arcsec:
+        description: IRSA discovery radius in arcseconds
+        required: true
+        default: "30"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spherex-fits-validation
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Download and validate archive FITS
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Discover and validate real SPHEREx FITS product
+        working-directory: backend
+        env:
+          RA_DEG: ${{ inputs.ra_deg }}
+          DEC_DEG: ${{ inputs.dec_deg }}
+          RADIUS_ARCSEC: ${{ inputs.radius_arcsec }}
+        run: |
+          python scripts/validate_spherex_cube.py \
+            --ra "$RA_DEG" \
+            --dec "$DEC_DEG" \
+            --radius-arcsec "$RADIUS_ARCSEC" \
+            --output spherex-validation-report.json
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spherex-fits-validation-report
+          path: backend/spherex-validation-report.json
+          if-no-files-found: warn
+          retention-days: 30
