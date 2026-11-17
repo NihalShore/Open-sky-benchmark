@@ -264,7 +264,7 @@ def test_hips_metadata_returns_official_102_channel_wavelengths(monkeypatch):
 def test_hips_frame_proxies_official_png(monkeypatch):
     class FakeResponse:
         headers = {"Content-Type": "image/png"}
-        content = b"\\x89PNG\\r\\n\\x1a\\nfixture"
+        content = b"\x89PNG\r\n\x1a\nfixture"
 
         def raise_for_status(self):
             return None
