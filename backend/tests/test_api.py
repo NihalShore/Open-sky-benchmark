@@ -178,7 +178,7 @@ def test_cube_preview_reuses_the_discovered_irsa_url(monkeypatch):
     monkeypatch.setattr(main, "discover_cube_products", fail_discovery)
     monkeypatch.setattr(main, "download_cube", fake_download)
     monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
-    monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\\x89PNG\\r\\n\\x1a\\nfixture")
+    monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\x89PNG\r\n\x1a\nfixture")
 
     response = client.get(
         "/api/v1/cube/preview",
