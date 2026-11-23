@@ -156,8 +156,8 @@
       </section>
 
       <section id="time-domain" class="panel time-panel" aria-labelledby="time-title">
-        <div class="section-heading compact-heading"><div><p class="section-kicker">03 / SEPARATE TIME DOMAIN</p><h2 id="time-title">NEOWISE-R light curve</h2></div><button id="neowise-button" class="button button-small button-quiet" type="button" disabled>Query NEOWISE ↗</button></div>
-        <p class="time-intro">Dated single-exposure measurements from the NEOWISE-R catalog. This is a separate mission and instrument from the SPHEREx spectral cube.</p>
+        <div class="section-heading compact-heading"><div><p class="section-kicker">03 / SEPARATE TIME DOMAIN</p><h2 id="time-title">NEOWISE-R dated measurements</h2></div><button id="neowise-button" class="button button-small button-quiet" type="button" disabled>Query NEOWISE ↗</button></div>
+        <p class="time-intro">Nearby dated single-exposure rows from the NEOWISE-R catalog. These measurements may belong to different sources in the search cone; source cross-matching is not performed.</p>
         <div id="light-curve" class="light-curve">
           <div class="chart-empty"><span>TIME SERIES</span><strong>Waiting for a field query</strong><small>Choose a position, then load NEOWISE measurements.</small></div>
         </div>
@@ -173,7 +173,7 @@
       <div class="method-grid">
         <article class="method-card"><span>01 / LOCATE</span><h3>Start with ICRS</h3><p>Coordinate validation and a bounded search radius locate the field in the public archive.</p></article>
         <article class="method-card"><span>02 / INSPECT</span><h3>Read the spectrum</h3><p>Compare official wavelength-channel previews while keeping the product and preview provenance visible.</p></article>
-        <article class="method-card"><span>03 / REVIEW</span><h3>Separate time from colour</h3><p>Use dated NEOWISE-R single exposures for temporal context. A wavelength difference is not a multi-epoch residual.</p></article>
+        <article class="method-card"><span>03 / REVIEW</span><h3>Separate time from colour</h3><p>Review dated NEOWISE-R single exposures as nearby catalog measurements; source association is not performed. A wavelength difference is not a multi-epoch residual.</p></article>
       </div>
       <div class="method-foot"><strong>Scientific limits</strong><p>HiPS PNGs are for display only. This demo does not perform calibrated multi-epoch subtraction, PSF matching, photometric scaling, uncertainty propagation, or automated candidate classification. FITS discovery is not the same as FITS validation.</p></div>
     </section>
