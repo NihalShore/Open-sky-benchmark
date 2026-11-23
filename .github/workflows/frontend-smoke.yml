@@ -1,0 +1,25 @@
+name: Frontend smoke tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/frontend-smoke.yml"]
+  push:
+    branches: [main, "feat/**"]
+    paths: ["web/**", ".github/workflows/frontend-smoke.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check browser module syntax
+        run: node --check web/app.js
+      - name: Test HEALPix coordinate lookup
+        run: node --test web/tests/healpix.test.mjs
