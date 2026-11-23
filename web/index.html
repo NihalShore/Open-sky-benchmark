@@ -1,311 +1,191 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#080d18">
-<meta name="description" content="SPHEREx TimeLens — an open, science-first workspace for exploring the infrared sky across wavelength and time.">
-<title>SPHEREx TimeLens — Open Sky Benchmark</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-:root{--bg:#080d18;--panel:#0d1524;--panel2:#101c2d;--line:#1e2a3e;--muted:#8c9ab0;--text:#eef3fb;--cyan:#70e2df;--violet:#9a8cff;--amber:#f2bd73;--green:#92d9b5;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--display:'Space Grotesk',sans-serif}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.55}button,input{font:inherit}button{cursor:pointer}.shell{max-width:1380px;margin:auto;padding:0 42px}.topbar{height:76px;border-bottom:1px solid rgba(140,154,176,.14);display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text)}.mark{width:34px;height:34px;border:1px solid rgba(112,226,223,.55);border-radius:50%;display:grid;place-items:center;position:relative}.mark:before,.mark:after{content:'';position:absolute;border:1px solid var(--cyan);border-radius:50%;width:21px;height:9px;transform:rotate(-35deg)}.mark:after{transform:rotate(55deg);width:9px;height:21px}.brand-name{font:600 15px var(--display);letter-spacing:.12em}.brand-sub{font:10px var(--mono);color:var(--muted);letter-spacing:.16em;margin-top:1px}.nav{display:flex;align-items:center;gap:28px}.nav a{color:#a8b4c6;text-decoration:none;font-size:12px}.nav a:hover{color:var(--cyan)}.nav .status{border:1px solid var(--line);padding:8px 11px;border-radius:6px;font:10px var(--mono);letter-spacing:.06em;color:var(--green)}.hero{position:relative;padding:82px 0 52px;overflow:hidden}.hero:before{content:'';position:absolute;width:620px;height:620px;right:-130px;top:-200px;background:radial-gradient(circle,rgba(63,128,166,.16),rgba(107,82,171,.07) 42%,transparent 69%);pointer-events:none}.eyebrow{font:10px var(--mono);color:var(--cyan);letter-spacing:.19em;text-transform:uppercase;display:flex;align-items:center;gap:10px}.eyebrow:before{content:'';width:26px;height:1px;background:var(--cyan)}h1{font:500 clamp(45px,6vw,78px)/.99 var(--display);letter-spacing:-.055em;max-width:780px;margin:23px 0 21px}h1 em{font-style:normal;color:var(--cyan)}.hero-copy{max-width:590px;color:#aab7c8;font-size:15px;line-height:1.8}.hero-foot{display:flex;align-items:center;gap:18px;margin-top:30px}.btn{border:1px solid rgba(112,226,223,.55);background:var(--cyan);color:#07121b;padding:12px 17px;border-radius:5px;font:600 12px var(--display);transition:.2s}.btn:hover{transform:translateY(-2px);filter:brightness(1.08)}.btn.secondary{background:transparent;color:var(--text);border-color:var(--line)}.hero-foot small{font:10px var(--mono);color:var(--muted)}.notice{display:flex;gap:10px;align-items:center;padding:12px 15px;border:1px solid rgba(242,189,115,.25);background:rgba(242,189,115,.055);border-radius:6px;color:#e4c99d;font-size:11px;margin:8px 0 35px}.notice b{font:10px var(--mono);letter-spacing:.08em;color:var(--amber)}.section-head{display:flex;justify-content:space-between;align-items:end;margin:38px 0 16px}.section-head h2{font:500 23px var(--display);letter-spacing:-.03em;margin:4px 0}.section-head p{margin:0;color:var(--muted);font-size:12px}.mono{font:10px var(--mono);letter-spacing:.09em;color:var(--muted);text-transform:uppercase}.workspace{display:grid;grid-template-columns:310px 1fr;gap:14px}.card{border:1px solid var(--line);border-radius:8px;background:linear-gradient(145deg,rgba(16,28,45,.96),rgba(11,19,32,.98));overflow:hidden}.card-hd{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.card-hd strong{font:500 13px var(--display)}.card-body{padding:18px}.field{margin-bottom:14px}.field label{display:block;font:10px var(--mono);color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px}.field input{width:100%;border:1px solid #2a3a51;background:#080f1c;color:var(--text);border-radius:5px;padding:11px 12px;outline:none;font:12px var(--mono)}.field input:focus{border-color:var(--cyan)}.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hint{font-size:10px;color:#718198;margin-top:9px}.full{width:100%}.archive-box{margin-top:17px;padding:12px;border-radius:5px;background:#0a1220;border:1px solid var(--line)}.archive-box .line{display:flex;justify-content:space-between;gap:8px;margin:7px 0;font-size:11px}.archive-box .line span:first-child{color:var(--muted)}.tag{font:9px var(--mono);letter-spacing:.06em;border-radius:3px;padding:4px 6px;border:1px solid var(--line);color:#aebcd0}.tag.warn{color:var(--amber);border-color:rgba(242,189,115,.3)}.tag.ok{color:var(--green);border-color:rgba(146,217,181,.3)}.visual{min-height:438px;display:flex;flex-direction:column}.visual-toolbar{display:flex;justify-content:space-between;align-items:center;padding:14px 17px;border-bottom:1px solid var(--line);gap:12px}.visual-toolbar .left{display:flex;align-items:center;gap:9px}.visual-toolbar small{color:var(--muted);font:10px var(--mono)}.visual-content{padding:17px;display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1}.plane{position:relative;min-height:260px;background:#070c16;border:1px solid #25334a;border-radius:5px;overflow:hidden}.plane canvas{width:100%;height:100%;position:absolute;inset:0}.plane-label{position:absolute;left:12px;top:11px;font:10px var(--mono);color:#c0d2e3;z-index:2}.plane-label span{color:var(--cyan)}.plane-foot{position:absolute;bottom:10px;left:12px;right:12px;display:flex;justify-content:space-between;font:9px var(--mono);color:#8392a9;z-index:2}.crosshair{position:absolute;inset:50% auto auto 50%;width:28px;height:28px;transform:translate(-50%,-50%);z-index:2}.crosshair:before,.crosshair:after{content:'';position:absolute;background:rgba(112,226,223,.7)}.crosshair:before{width:28px;height:1px;top:13px}.crosshair:after{width:1px;height:28px;left:13px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 17px 17px}.stat{border:1px solid var(--line);background:#0a1220;border-radius:5px;padding:11px 12px}.stat label{display:block;font:9px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.07em}.stat strong{display:block;font:500 18px var(--display);margin-top:4px}.stat small{font-size:9px;color:#8291a7}.channel-card{margin-top:14px;padding:18px}.channel-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.channel-top strong{font:500 13px var(--display)}.channel-value{font:11px var(--mono);color:var(--cyan)}.range{width:100%;accent-color:var(--cyan)}.channel-scale{display:flex;justify-content:space-between;color:#718198;font:9px var(--mono);margin-top:3px}.spectrum{width:100%;height:54px;margin-top:12px;display:block}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}.metric{padding:18px}.metric .big{font:500 25px var(--display);margin:12px 0 4px}.metric p{font-size:11px;color:var(--muted);margin:0}.metric .micro{font:9px var(--mono);color:var(--cyan);letter-spacing:.1em}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}.step{padding:18px;min-height:150px}.step .num{font:10px var(--mono);color:var(--cyan)}.step h3{font:500 15px var(--display);margin:14px 0 7px}.step p{margin:0;color:var(--muted);font-size:11px;line-height:1.7}.sources{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:15px 0 60px}.source{padding:17px;display:flex;align-items:center;justify-content:space-between;gap:12px}.source strong{font:500 13px var(--display)}.source p{margin:4px 0 0;color:var(--muted);font-size:10px}.source a{color:var(--cyan);font:10px var(--mono);text-decoration:none;white-space:nowrap}.footer{border-top:1px solid var(--line);padding:24px 0 34px;color:#718198;display:flex;justify-content:space-between;font-size:10px}.footer strong{color:#b3c1d4;font:10px var(--mono);letter-spacing:.08em}.toast{position:fixed;bottom:22px;right:22px;background:#142538;border:1px solid rgba(112,226,223,.4);color:#dce9f4;padding:12px 16px;border-radius:6px;box-shadow:0 14px 50px #0008;opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none;z-index:20;font-size:12px}.toast.show{opacity:1;transform:none}.grid-lines{background-image:linear-gradient(rgba(67,105,133,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(67,105,133,.08) 1px,transparent 1px);background-size:30px 30px}
-@media(max-width:900px){.shell{padding:0 22px}.workspace{grid-template-columns:1fr}.visual{min-height:350px}.nav{gap:14px}.nav a:not(.status){display:none}}@media(max-width:600px){.shell{padding:0 16px}.hero{padding:58px 0 38px}h1{font-size:50px}.hero-foot{align-items:flex-start;flex-direction:column}.visual-content{grid-template-columns:1fr}.plane{min-height:210px}.stats{grid-template-columns:1fr 1fr}.metrics,.steps,.sources{grid-template-columns:1fr}.section-head{align-items:flex-start;flex-direction:column;gap:5px}.footer{gap:15px;flex-direction:column}.topbar{height:65px}.brand-name{font-size:13px}}
-
-/* Interface refresh: keep archive behavior intact while improving hierarchy and access. */
-:root{--bg:#070b13;--panel:#0c1421;--panel2:#111e30;--line:#26364b;--muted:#a0aec1;--text:#f2f6fc;--cyan:#83e8e1}
-body{background:radial-gradient(ellipse at 78% 0%,rgba(48,94,129,.13),transparent 38%),var(--bg)}
-.shell{max-width:1460px}
-.topbar{position:sticky;top:0;z-index:15;background:rgba(7,11,19,.88);backdrop-filter:blur(16px);padding-top:0}
-.hero{padding-top:72px;padding-bottom:44px}
-.hero-copy{max-width:640px}
-.notice{border-radius:8px}
-.card{border-radius:10px;box-shadow:0 12px 38px rgba(0,0,0,.12)}
-.card-hd,.visual-toolbar{background:rgba(7,13,23,.38)}
-.field input{min-height:44px}
-.field input:disabled{opacity:.72;cursor:not-allowed}
-.btn{min-height:42px;border-radius:6px}
-.btn:focus-visible,.nav a:focus-visible,.field input:focus-visible,.range:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
-.btn:disabled{opacity:.48;cursor:not-allowed;transform:none;filter:none}
-.workspace{align-items:stretch;gap:16px}
-.visual{min-width:0}
-.visual-content{gap:14px}
-.plane{min-width:0;border-radius:7px}
-.plane-label,.plane-foot{letter-spacing:.035em}
-.stats{gap:12px}
-.stat{border-radius:7px}
-.channel-card{border-radius:10px}
-.metrics,.steps,.sources{gap:16px}
-.metric,.step,.source{border-radius:10px}
-.metric .big{letter-spacing:-.035em}
-.source a{padding:8px 0}
-.tag{white-space:nowrap}
-#observation-list,#neowise-list{overflow-wrap:anywhere}
-.notice-error{border-color:rgba(255,130,130,.35);background:rgba(150,45,45,.10);color:#ffd0d0}
-.notice-error b{color:#ffaaaa}
-@media(min-width:1100px){.workspace{grid-template-columns:minmax(285px,320px) minmax(0,1fr)}.visual-content{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
-@media(max-width:900px){.topbar{position:relative}.hero{padding-top:54px}.workspace{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:600px){.hero{padding-top:48px}.hero-copy{font-size:14px}.visual-toolbar{align-items:flex-start;flex-direction:column}.visual-content{padding:12px}.stats{padding:0 12px 12px;gap:8px}.stat{padding:10px}.stat strong{font-size:16px}.channel-card{padding:14px}.field input{font-size:16px}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
-
-
-/* Observatory interface: a stronger workspace-first layout. */
-:root{--bg:#050911;--panel:#0b1422;--panel2:#101d2e;--line:#26374d;--muted:#9eafc4;--text:#f4f7fb;--cyan:#79eee3;--violet:#9e9bff;--amber:#ffc47d}
-body{background:#050911;background-image:radial-gradient(ellipse at 82% 12%,rgba(37,105,128,.17),transparent 31%),linear-gradient(180deg,#070e19 0%,#050911 68%);letter-spacing:.005em}
-.shell{max-width:1540px;padding-left:clamp(20px,4vw,64px);padding-right:clamp(20px,4vw,64px)}
-.topbar{height:72px;border-bottom:1px solid rgba(133,164,190,.16);margin:0 auto}
-.brand{gap:14px}.mark{width:38px;height:38px;background:rgba(121,238,227,.05);box-shadow:0 0 24px rgba(121,238,227,.08)}
-.brand-name{font-size:14px;letter-spacing:.16em}.brand-sub{font-size:9px}
-.nav{gap:32px}.nav a{font-size:12px;color:#b8c5d5}.nav .status{padding:9px 13px;border-radius:4px;background:rgba(121,238,227,.045)}
-.hero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(290px,.85fr);grid-template-rows:auto auto auto;column-gap:42px;align-items:center;padding:62px 0 35px;min-height:350px}
-.hero .eyebrow{grid-column:1;grid-row:1}
-.hero h1{grid-column:1;grid-row:2;font-size:clamp(54px,6.1vw,88px);max-width:720px;margin:17px 0 14px;line-height:.94;letter-spacing:-.07em}
-.hero-copy{grid-column:1;grid-row:3;margin:0;max-width:620px;font-size:14px;line-height:1.8;color:#b4c2d2}
-.hero-foot{grid-column:1;grid-row:4;margin-top:22px;align-items:center}
-.hero:before{width:520px;height:520px;right:2%;top:-110px;background:radial-gradient(circle,rgba(38,143,157,.17),rgba(81,88,165,.08) 37%,transparent 68%)}
-.hero:after{content:"SPHEREx  /  ALL-SKY\A\A 0.75 — 5.0 μm\A\A 102 CHANNELS\A\A ARCHIVE-FIRST";white-space:pre;grid-column:2;grid-row:1/5;justify-self:stretch;align-self:stretch;display:flex;align-items:center;justify-content:center;min-height:260px;border:1px solid rgba(121,238,227,.22);border-radius:14px;background:radial-gradient(circle at 50% 45%,rgba(73,182,190,.14),transparent 45%),linear-gradient(145deg,rgba(15,31,48,.92),rgba(7,14,24,.8));box-shadow:inset 0 0 80px rgba(51,117,143,.08),0 22px 70px rgba(0,0,0,.2);color:#bcece8;font:11px/2.3 var(--mono);letter-spacing:.18em;text-align:center;text-shadow:0 0 18px rgba(121,238,227,.25);position:relative}
-.notice{margin:8px 0 28px;padding:13px 16px;border-radius:5px;background:linear-gradient(90deg,rgba(255,196,125,.09),rgba(255,196,125,.025));border-color:rgba(255,196,125,.28)}
-.section-head{margin:34px 0 14px}.section-head h2{font-size:25px;letter-spacing:-.045em}
-.workspace{grid-template-columns:minmax(270px,330px) minmax(0,1fr);gap:18px}
-.card{border-radius:9px;background:linear-gradient(155deg,rgba(14,27,43,.98),rgba(8,16,28,.98));border-color:#263950;box-shadow:0 18px 50px rgba(0,0,0,.17)}
-.card-hd{padding:17px 19px}.card-hd strong{font-size:14px}
-.card-body{padding:19px}
-.field{margin-bottom:16px}.field label{font-size:9px;letter-spacing:.14em;color:#a7b7ca}
-.field input{background:#070e18;border-color:#30435a;border-radius:4px;padding:12px 13px;min-height:46px}
-.btn{border-radius:4px;min-height:46px;font-size:12px;letter-spacing:.025em}
-.btn.secondary{background:#111f30;border-color:#344a62;color:#d9e5f0}
-.btn.secondary:hover{border-color:var(--cyan);color:var(--cyan)}
-.archive-box{background:#070f1b;border-color:#293b51;padding:14px}
-.archive-box .mono{color:var(--cyan);letter-spacing:.15em}
-.archive-box .line{padding:5px 0;border-bottom:1px solid rgba(130,158,185,.09);font-size:10px}
-.archive-box .line:last-child{border-bottom:0}
-.tag{border-radius:3px;background:rgba(148,170,194,.045);padding:5px 7px;font-size:8px}
-.visual{min-height:480px}
-.visual-toolbar{padding:15px 18px;background:rgba(4,10,18,.65)}
-.visual-toolbar small{font-size:9px;letter-spacing:.05em}
-.visual-content{padding:18px;gap:15px}
-.plane{min-height:290px;background-color:#050a12;border-color:#2a4058;border-radius:5px}
-.plane-label{font-size:9px;letter-spacing:.1em}
-.plane-foot{font-size:8px;letter-spacing:.05em}
-.stats{padding:0 18px 18px;gap:10px}
-.stat{background:rgba(5,12,21,.72);border-color:#293b51;border-radius:5px;padding:13px}
-.stat label{font-size:8px;letter-spacing:.12em}.stat strong{font-size:20px}
-.channel-card{margin-top:16px;padding:20px 22px;background:linear-gradient(100deg,rgba(14,28,44,.98),rgba(9,17,29,.98))}
-.channel-top strong{font-size:14px}.channel-value{font-size:10px;letter-spacing:.1em}
-.range{margin:10px 0;cursor:pointer}
-.metrics{gap:16px}.metric{padding:21px}.metric .big{font-size:28px}
-.steps{grid-template-columns:repeat(3,minmax(0,1fr))}
-.step{min-height:170px;padding:20px}
-.step h3{font-size:16px}
-.source{padding:19px}
-.footer{border-color:#26374d}
-#archive-details{white-space:pre-line!important;overflow-wrap:anywhere}
-@media(max-width:900px){.hero{display:block;min-height:0;padding:48px 0 30px}.hero:after{display:none}.hero h1{font-size:clamp(50px,9vw,72px)}.hero-copy{max-width:680px}.workspace{grid-template-columns:1fr}.visual{min-height:400px}}
-@media(max-width:600px){.shell{padding-left:16px;padding-right:16px}.hero{padding-top:42px}.hero h1{font-size:52px}.hero-foot{flex-direction:row;flex-wrap:wrap;gap:12px}.hero-foot small{font-size:9px}.nav{gap:12px}.nav a{display:none}.nav .status{display:inline-flex}.visual-content{grid-template-columns:1fr}.plane{min-height:230px}.steps{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.card-body{padding:15px}.section-head h2{font-size:22px}}
-
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070d17">
+  <meta name="description" content="SPHEREx TimeLens: explore real NASA/IPAC IRSA infrared archive data across wavelength, with a separate NEOWISE-R time-domain view.">
+  <title>SPHEREx TimeLens — Open Sky</title>
+  <link rel="preconnect" href="https://irsa.ipac.caltech.edu">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
 </head>
 <body>
-<header class="shell topbar">
-<a class="brand" href="#">
-<span class="mark"></span><span><span class="brand-name">OPEN SKY</span><br><span class="brand-sub">SPHEREx TIMELENS</span></span>
-</a>
-<nav class="nav"><a href="#workspace">Explorer</a><a href="#method">Method</a><a href="#sources">Data sources</a><span id="service-state" class="status"><span>API CHECKING</span></span></nav>
-</header>
-<main class="shell">
-<section class="hero">
-<div class="eyebrow">An open infrared sky workspace</div>
-<h1>The sky doesn't<br><em>sit still.</em></h1>
-<p class="hero-copy">Explore the changing infrared sky through time and wavelength. TimeLens brings archive discovery, spectral context and repeatable comparisons into one science-first workspace.</p>
-<div class="hero-foot"><button class="btn" onclick="document.querySelector('#workspace').scrollIntoView({behavior:'smooth'})">Open the explorer ↗</button><small>SPHEREx · 0.75–5.0 μm · 102 reference channels</small></div>
-</section>
-<div class="notice"><b>SCIENCE MODE</b><span>Only NASA/IPAC IRSA archive responses are presented as observations. No synthetic replacement is shown when archive requests fail.</span></div>
-<section id="workspace">
-<div class="section-head"><div><div class="mono">01 / Workspace</div><h2>Explore a sky position</h2></div><p>ICRS coordinates · NASA/IPAC IRSA</p></div>
-<div class="workspace">
-<aside class="card">
-<div class="card-hd"><strong>Observation query</strong><span class="tag">ICRS J2000</span></div>
-<div class="card-body">
-<div class="field-row">
-<div class="field"><label for="ra">Right ascension</label><input id="ra" value="127.69444" inputmode="decimal"></div>
-<div class="field"><label for="dec">Declination</label><input id="dec" value="-39.17760" inputmode="decimal"></div>
-</div>
-<div class="field"><label for="radius">Search radius (arcsec)</label><input id="radius" value="120" inputmode="numeric"></div>
-<div class="field"><label>Data collection</label><input value="SPHEREx reference grid" disabled></div>
-<button id="search" class="btn full">Search NASA archive ↗</button>
-<p class="hint">Searches SPHEREx SIA2 metadata and the DR1 All-Sky Cube collection. The viewer loads official IRSA HiPS PNG frames for quick display; use FITS products for science analysis.</p>
-<div class="archive-box">
-<div class="mono">Data provenance</div>
-<div class="line"><span>Archive</span><span id="archive-status" class="tag">Pending</span></div>
-<div class="line"><span>FITS product</span><span id="product-status" class="tag warn">Not discovered</span></div>
-<div class="line"><span>Preview source</span><span id="source-status" class="tag">Not loaded</span></div>
-<div class="line"><span>Preview status</span><span id="preview-status" class="tag">Pending</span></div>
-<div class="line"><span>Preview mode</span><span class="tag warn">Display only</span></div>
-<div class="line"><span>Scientific validation</span><span id="science-status" class="tag warn">Not performed</span></div>
-</div>
-</div>
-</aside>
-<div class="card visual">
-<div class="visual-toolbar"><div class="left"><span id="viewer-status" class="tag">● WAITING FOR ARCHIVE</span><small id="coord-label">RA 127.69444° / DEC −39.17760°</small></div><small id="view-label">SPHEREx DR1 · HiPS DISPLAY</small></div>
-<div class="visual-content">
-<div class="plane grid-lines"><div class="plane-label">SPHEREx DR1 <span> / HiPS FRAME</span></div><canvas id="plane-a"></canvas><div class="crosshair"></div><div class="plane-foot"><span>HiPS PNG · archive-backed</span><span>0.75–5.0 μm</span></div></div>
-<div class="plane grid-lines"><div class="plane-label">ARCHIVE <span> / PROVENANCE</span></div><div id="archive-details" style="padding:46px 15px 12px;color:#9fb2c8;font:10px var(--mono);line-height:2">No archive product loaded.</div></div>
-</div>
-<div class="stats">
-<div class="stat"><label>Channel</label><strong id="stat-channel">—</strong><small>of 102</small></div>
-<div class="stat"><label>Wavelength</label><strong id="stat-wave">—</strong><small>micrometres</small></div>
-<div class="stat"><label>FITS NHITS coverage</label><strong id="stat-valid">N/A</strong><small>not measured in HiPS</small></div>
-<div class="stat"><label>FITS FLAGS pixels</label><strong id="stat-changed">N/A</strong><small>not measured in HiPS</small></div>
-</div>
-</div>
-</div>
-<div class="card channel-card">
-<div class="channel-top"><strong>Spectral channel inspector</strong><span class="channel-value" id="channel-label">CHANNEL NOT LOADED</span></div>
-<input id="channel" class="range" type="range" min="0" max="101" value="0" disabled>
-<button id="load-channel" class="btn secondary" disabled>Load selected channel</button>
-<div class="channel-scale"><span>CHANNEL 001</span><span>102 wavelength channels</span><span>CHANNEL 102</span></div>
-<p class="hint">Wavelengths are read from IRSA HiPS metadata. Blank channels remain blank in the archive.</p>
-</div>
-</section>
-<section id="archive-results">
-<div class="section-head"><div><div class="mono">02 / Archive records</div><h2>SPHEREx observations</h2></div><p id="observation-count">No query submitted</p></div>
-<div class="card"><div id="observation-list" class="card-body">Archive metadata appears after a successful query.</div></div>
-<div class="section-head"><div><div class="mono">03 / Separate time domain</div><h2>NEOWISE-R single exposures</h2></div><button id="neowise-search" class="btn secondary" disabled>Load NEOWISE measurements</button></div>
-<div class="card"><div id="neowise-list" class="card-body">NEOWISE is a separate mission and instrument. Its dated W1/W2 measurements are reviewed independently of SPHEREx wavelength channels.</div></div>
-</section>
-<section id="method">
-<div class="section-head"><div><div class="mono">04 / Analysis path</div><h2>From query to evidence</h2></div><p>A transparent workflow, not a black box</p></div>
-<div class="metrics">
-<div class="card metric"><div class="micro">SPECTRAL CONTEXT</div><div class="big">102 <span style="color:var(--cyan)">channels</span></div><p>Reference channel grid spanning the SPHEREx near-infrared range.</p></div>
-<div class="card metric"><div class="micro">TIME DOMAIN</div><div class="big">Multi-epoch</div><p>Compare observations across repeat visits while keeping epoch metadata visible.</p></div>
-<div class="card metric"><div class="micro">DATA INTEGRITY</div><div class="big">Provenance</div><p>Keep archive products, synthetic previews and unverified candidates clearly distinct.</p></div>
-</div>
-<div class="steps">
-<div class="card step"><div class="num">STEP 01</div><h3>Locate the field</h3><p>Use coverage-aware differences as investigation candidates. Confirm calibration, WCS and source association before interpretation.</p></div>
-</div>
-</section>
-<section id="sources">
-<div class="section-head"><div><div class="mono">05 / Reference material</div><h2>Built around public data</h2></div><p>Primary archive documentation</p></div>
-<div class="sources">
-<div class="card source"><div><strong>NASA/IPAC IRSA</strong><p>SPHEREx archive and data access documentation</p></div><a href="https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/" target="_blank" rel="noreferrer">OPEN ↗</a></div>
-<div class="card source"><div><strong>SPHEREx data releases</strong><p>Release contents, products and archive notes</p></div><a href="https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-releases/" target="_blank" rel="noreferrer">OPEN ↗</a></div>
-<div class="card source"><div><strong>IRSA tutorials</strong><p>Examples for working with SPHEREx archive data</p></div><a href="https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/" target="_blank" rel="noreferrer">OPEN ↗</a></div>
-<div class="card source"><div><strong>Project repository</strong><p>Open development, methods and implementation</p></div><a href="https://github.com/NihalShore/Open-sky-benchmark" target="_blank" rel="noreferrer">GITHUB ↗</a></div>
-</div>
-</section>
-<footer class="footer"><strong>OPEN SKY BENCHMARK / TIMELENS</strong><span>Independent research prototype · Not affiliated with or endorsed by NASA</span><span>© 2026</span></footer>
-</main>
-<div id="toast" class="toast">Demo view refreshed.</div>
-<script>
-(() => {
-"use strict";
-const API="https://open-sky-timelens-api.vercel.app",$=id=>document.getElementById(id);
-let query=null,cubeFound=false,cubeTileId=null,cubeProductUrl=null,cubeObservationId=null,hipsMetadata=null;
-function notice(kind,title,message){const el=document.querySelector(".notice");el.className="notice"+(kind==="error"?" notice-error":"");el.replaceChildren();const b=document.createElement("b"),s=document.createElement("span");b.textContent=title;s.textContent=message;el.append(b,s);}
-function mjdDate(v){const n=Number(v);return Number.isFinite(n)?new Date((n-40587)*86400000).toISOString().slice(0,10):"Date unavailable";}
-function paramsFor(q){return new URLSearchParams({ra_deg:String(q.ra_deg),dec_deg:String(q.dec_deg),radius_arcsec:String(q.radius_arcsec)});}
-async function api(path,options){const c=new AbortController(),t=setTimeout(()=>c.abort(),60000);try{const r=await fetch(API+path,Object.assign({},options||{},{signal:c.signal}));if(!r.ok){let m="API returned HTTP "+r.status;try{const b=await r.json();if(typeof b.detail==="string")m=b.detail;}catch(_){}throw new Error(m);}return r;}catch(e){if(e.name==="AbortError")throw new Error("The archive request timed out. Try a smaller radius.");throw e;}finally{clearTimeout(t);}}
-function readQuery(){const ra=Number($("ra").value),dec=Number($("dec").value),radius=Number($("radius").value);if(!Number.isFinite(ra)||ra<0||ra>=360)throw new Error("Right ascension must be from 0 to less than 360 degrees.");if(!Number.isFinite(dec)||dec< -90||dec>90)throw new Error("Declination must be between -90 and 90 degrees.");if(!Number.isFinite(radius)||radius<=0||radius>1800)throw new Error("Search radius must be positive and no more than 1,800 arcseconds.");return{ra_deg:ra,dec_deg:dec,radius_arcsec:radius};}
-function observations(items){const box=$("observation-list");box.replaceChildren();$("observation-count").textContent=items.length+" archive record"+(items.length===1?"":"s");if(!items.length){box.textContent="IRSA returned no SPHEREx spectral-image records for this position.";return;}items.slice(0,30).forEach(i=>{const row=document.createElement("div");row.style.cssText="display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:11px";const a=document.createElement("div"),b=document.createElement("div"),c=document.createElement("div"),title=document.createElement("strong"),col=document.createElement("small"),band=document.createElement("strong"),wave=document.createElement("div"),date=document.createElement("div");title.textContent=i.observation_id||"—";col.textContent=(i.collection||"")+" · "+(i.facility||"SPHEREx");band.textContent=i.bandpass_name||i.data_product_type||"product";wave.textContent=(i.wavelength_min!=null&&i.wavelength_max!=null)?(i.wavelength_min+"–"+i.wavelength_max+" μm"):"";date.textContent=mjdDate(i.observation_start_mjd);a.append(title,document.createElement("br"),col);b.append(band,document.createElement("br"),wave);c.append(date);row.append(a,b,c);box.append(row);});}
-function neowise(items){const box=$("neowise-list");box.replaceChildren();if(!items.length){box.textContent="No NEOWISE-R single-exposure sources returned for this position.";return;}items.slice(0,40).forEach(i=>{const row=document.createElement("div");row.style.cssText="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:11px";row.innerHTML="<div><strong>"+(i.source_id||"—")+"</strong><br><small>W"+(i.w1mpro!=null?"1":"2")+"</small></div><div>"+(i.mjd!=null?mjdDate(i.mjd):"—")+"</div><div>"+(i.w1mpro!=null?i.w1mpro.toFixed(3):i.w2mpro!=null?i.w2mpro.toFixed(3):"—")+" mag</div>";box.append(row);});}
-async function loadChannel(){
- if(!cubeTileId||!hipsMetadata)return;
- const idx=Number($("channel").value);
- const wave=hipsMetadata.wavelength_um?.[idx];
- const canvas=$("plane-a");
- const ctx=canvas.getContext("2d");
- $("load-channel").disabled=true;
- $("channel-label").textContent="LOADING CHANNEL "+String(idx+1).padStart(3,"0");
- $("viewer-status").textContent="LOADING IRSA HiPS FRAME";
- $("preview-status").textContent="Loading";
- $("preview-status").className="tag";
- $("stat-channel").textContent=String(idx+1).padStart(3,"0");
- $("stat-wave").textContent=wave!=null?wave.toFixed(3):"—";
- $("stat-valid").textContent="N/A";
- $("stat-changed").textContent="N/A";
- ctx.clearRect(0,0,canvas.width,canvas.height);
- let objectUrl=null;
- try{
-  const response=await api("/api/v1/hips/frame/"+cubeTileId+"/"+idx);
-  if(!response.headers.get("content-type")?.includes("image/png"))throw new Error("IRSA did not return a PNG frame.");
-  const blob=await response.blob();
-  objectUrl=URL.createObjectURL(blob);
-  const image=new Image();
-  await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(new Error("The archive frame could not be decoded."));image.src=objectUrl;});
-  canvas.width=image.width;
-  canvas.height=image.height;
-  ctx=canvas.getContext("2d");
-  ctx.drawImage(image,0,0);
-  $("channel-label").textContent="CHANNEL "+String(idx+1).padStart(3,"0")+(wave!=null?" · "+wave.toFixed(3)+" μm":"");
-  $("viewer-status").textContent="HiPS CHANNEL LOADED";
-  $("source-status").textContent="SPHEREx HiPS PNG";
-  $("source-status").className="tag ok";
-  $("archive-status").textContent="IRSA live";
-  $("archive-status").className="tag ok";
-  $("preview-status").textContent="Loaded";
-  $("preview-status").className="tag ok";
-  $("product-status").textContent="Discovered · not validated";
-  $("product-status").className="tag warn";
-  $("science-status").textContent="Not performed";
-  $("science-status").className="tag warn";
-  $("view-label").textContent="SPHEREx DR1 · HiPS DISPLAY TILE";
-  $("archive-details").textContent=
-   "Archive: NASA/IPAC IRSA\n"+
-   "FITS product: "+(cubeObservationId||"DR1 All-Sky Cube")+" (discovered; not downloaded or validated)\n"+
-   "FITS URL: "+(cubeProductUrl||"not returned")+"\n"+
-   "Preview: official HiPS PNG · tile Npix"+cubeTileId+" · channel "+(idx+1)+" of 102\n"+
-   "Wavelength: "+(wave!=null?wave.toFixed(3)+" μm":"not published")+"\n"+
-   "NHITS / FLAGS: not available from this display PNG.";
- }catch(error){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  const blankDichroic = idx===50 || idx===51;
-  $("channel-label").textContent="CHANNEL "+String(idx+1).padStart(3,"0")+(blankDichroic?" · KNOWN BLANK":" · UNAVAILABLE");
-  $("viewer-status").textContent=blankDichroic?"KNOWN BLANK CHANNEL":"HiPS FRAME UNAVAILABLE";
-  $("source-status").textContent=blankDichroic?"No frame published":"Unavailable";
-  $("source-status").className="tag warn";
-  $("preview-status").textContent=blankDichroic?"Known blank":"Unavailable";
-  $("preview-status").className="tag warn";
-  $("product-status").textContent=cubeProductUrl?"Discovered · not validated":"Not discovered";
-  $("product-status").className="tag warn";
-  $("science-status").textContent="Not performed";
-  $("science-status").className="tag warn";
-  $("stat-valid").textContent="N/A";
-  $("stat-changed").textContent="N/A";
-  const reason=(idx===50 || idx===51)
-   ?"Known blank dichroic channel. IRSA documents channels 51 and 52 as intentionally blank positions in the 102-channel sequence."
-   :(error.message.includes("404")?"IRSA does not publish this frame for the selected tile.":error.message);
-  $("archive-details").textContent=
-   "Archive: NASA/IPAC IRSA\n"+
-   "FITS product: "+(cubeObservationId||"not discovered")+" (not validated)\n"+
-   "Preview: "+(idx===50 || idx===51?"known blank dichroic channel ":"channel ")+(idx+1)+"\n"+
-   "Reason: "+reason+"\n"+
-   "No substitute channel or synthetic image was used.";
-  notice("error","CHANNEL UNAVAILABLE",reason);
- }finally{
-  if(objectUrl)URL.revokeObjectURL(objectUrl);
-  $("load-channel").disabled=false;
- }
-}
-async function searchArchive(){let q;try{q=readQuery();}catch(e){notice("error","CHECK COORDINATES",e.message);return;}query=q;cubeFound=false;cubeTileId=null;cubeProductUrl=null;cubeObservationId=null;$("search").disabled=true;$("neowise-search").disabled=true;$("channel").disabled=true;$("load-channel").disabled=true;$("coord-label").textContent="RA "+q.ra_deg.toFixed(5)+"° / DEC "+q.dec_deg.toFixed(5)+"°";$("viewer-status").textContent="QUERYING NASA/IPAC IRSA";$("observation-list").textContent="Querying SPHEREx SIA2…";$("observation-count").textContent="Archive request running";$("archive-details").textContent="Contacting NASA/IPAC IRSA…";
- $("archive-status").textContent="Querying";$("archive-status").className="tag";
- $("product-status").textContent="Not discovered";$("product-status").className="tag warn";
- $("source-status").textContent="Not loaded";$("source-status").className="tag";
- $("preview-status").textContent="Pending";$("preview-status").className="tag";
- $("science-status").textContent="Not performed";$("science-status").className="tag warn";$("stat-channel").textContent=$("stat-wave").textContent="—";
- $("stat-valid").textContent=$("stat-changed").textContent="N/A";
- const startCanvas=$("plane-a");startCanvas.getContext("2d").clearRect(0,0,startCanvas.width,startCanvas.height);notice("live","LIVE ARCHIVE QUERY","Contacting NASA/IPAC IRSA. Results are shown only when returned by the archive.");try{const r=await Promise.allSettled([api("/api/v1/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ra_deg:q.ra_deg,dec_deg:q.dec_deg,radius_arcsec:q.radius_arcsec,collections:["spherex_dr1","spherex_qr3"]})}).then(x=>x.json()),api("/api/v1/cube/search?"+paramsFor(q).toString()).then(x=>x.json())]);let e1=null,e2=null;if(r[0].status==="fulfilled")observations(r[0].value.observations||[]);else{e1=r[0].reason;$("observation-list").textContent="SPHEREx SIA2 failed: "+e1.message;$("observation-count").textContent="SIA2 unavailable";}if(r[1].status==="fulfilled"){const products=r[1].value.products||[];const product=products[0]||null;cubeProductUrl=product?.access_url||null;cubeObservationId=product?.observation_id||null;const tileMatch=String((products[0]?.observation_id||"")+" "+(products[0]?.access_url||"")).match(/Npix(\d+)_cube(?:\.fits)?/i);cubeTileId=tileMatch?.[1]||null;cubeFound=Boolean(cubeTileId);
- $("archive-status").textContent="IRSA live";$("archive-status").className="tag ok";
- if(cubeProductUrl){$("product-status").textContent="Discovered · not validated";$("product-status").className="tag warn";}
- if(cubeFound){if(!hipsMetadata){const meta=await api("/api/v1/hips/metadata");hipsMetadata=await meta.json();} $("channel").disabled=false;$("load-channel").disabled=false;await loadChannel();}else{$("viewer-status").textContent="NO DR1 CUBE TILE FOUND";
- $("preview-status").textContent="Unavailable";$("preview-status").className="tag warn";
- $("archive-details").textContent="No DR1 All-Sky Cube product was returned for this position. No image was substituted.";}}else{e2=r[1].reason;$("viewer-status").textContent="CUBE SEARCH FAILED";
- $("archive-status").textContent="Unavailable";$("archive-status").className="tag warn";
- $("preview-status").textContent="Unavailable";$("preview-status").className="tag warn";
- $("archive-details").textContent="Cube discovery failed: "+e2.message;}$("neowise-search").disabled=false;if(e1&&e2)notice("error","IRSA UNAVAILABLE","Both archive requests failed. "+e1.message+" No synthetic image has been substituted.");else if(e1)notice("error","SIA2 SEARCH FAILED",e1.message);else if(e2)notice("error","CUBE SEARCH FAILED",e2.message);}catch(e){notice("error","ARCHIVE REQUEST FAILED",e.message);$("viewer-status").textContent="ARCHIVE REQUEST FAILED";}finally{$("search").disabled=false;}}
-async function searchNeowise(){if(!query)return;$("neowise-search").disabled=true;$("neowise-list").textContent="Querying NEOWISE-R…";try{const p=paramsFor(query);p.set("limit","200");const r=await api("/api/v1/neowise/search?"+p.toString()),payload=await r.json();neowise(payload.detections||[]);}catch(e){$("neowise-list").textContent="NEOWISE query failed: "+e.message;notice("error","NEOWISE QUERY FAILED",e.message);}finally{$("neowise-search").disabled=false;}}
-$("search").addEventListener("click",searchArchive);$("channel").addEventListener("change",loadChannel);$("load-channel").addEventListener("click",loadChannel);$("neowise-search").addEventListener("click",searchNeowise);["ra","dec","radius"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")searchArchive();}));
-api("/api/v1/health").then(r=>r.json()).then(()=>{$("service-state").classList.add("ok");$("service-state").querySelector("span").textContent="API ONLINE";$("viewer-status").textContent="READY FOR ARCHIVE QUERY";}).catch(()=>{$("service-state").classList.add("fail");$("service-state").querySelector("span").textContent="API OFFLINE";$("archive-details").textContent="API health check failed. No live archive data is available.";notice("error","API NOT CONNECTED","The TimeLens API did not respond. The viewer will not display simulated data.");});
-})();
-</script>
+  <a class="skip-link" href="#main">Skip to workspace</a>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Open Sky TimeLens home">
+      <span class="brand-mark" aria-hidden="true">◎</span>
+      <span class="brand-copy"><strong>OPEN SKY</strong><small>SPHEREx TIMELENS</small></span>
+    </a>
+    <nav class="nav" aria-label="Primary navigation">
+      <a href="#workspace">Explorer</a>
+      <a href="#time-domain">Time domain</a>
+      <a href="#method">Method</a>
+      <span id="api-status" class="api-pill" data-state="checking"><i></i><span>CHECKING API</span></span>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> Infrared archive observatory</p>
+        <h1>The sky has<br><em>a time dimension.</em></h1>
+        <p class="hero-intro">Explore SPHEREx across 102 spectral channels, then inspect dated NEOWISE-R measurements as a separate time-domain dataset. Every displayed frame is fetched from NASA/IPAC IRSA.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#workspace">Open the workspace <span aria-hidden="true">↘</span></a>
+          <span class="hero-meta">0.75–5.0 μm <b>·</b> 102 channels <b>·</b> public archive</span>
+        </div>
+      </div>
+      <div class="hero-visual" aria-label="Workspace capabilities">
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <div class="orbit-core"><span>IR</span></div>
+        <div class="hero-visual-label label-top"><small>MISSION</small><strong>SPHEREx</strong></div>
+        <div class="hero-visual-label label-bottom"><small>DATA ACCESS</small><strong>NASA / IPAC / IRSA</strong></div>
+        <div class="hero-visual-index">FIELD / 001</div>
+      </div>
+    </section>
+
+    <section class="integrity wrap" aria-label="Data integrity note">
+      <span class="integrity-mark">!</span>
+      <div><strong>Archive-first science mode</strong><p>Only archive-returned observations are shown. Channel comparisons are wavelength comparisons within one co-added cube, not separate observation dates. No synthetic sky is substituted when a request fails.</p></div>
+    </section>
+
+    <section id="workspace" class="wrap section-block">
+      <div class="section-heading">
+        <div><p class="section-kicker">01 / EXPLORER</p><h2>Find a field. Inspect its spectrum.</h2></div>
+        <p class="section-note">ICRS coordinates · live IRSA requests</p>
+      </div>
+
+      <div class="workspace-grid">
+        <aside class="panel query-panel">
+          <div class="panel-heading"><div><span class="panel-index">01</span><h3>Locate a position</h3></div><span class="mini-tag">ICRS J2000</span></div>
+          <form id="search-form" class="query-form">
+            <label class="field field-full">Quick target
+              <select id="target-preset">
+                <option value="custom">Custom coordinates</option>
+                <option value="field">Project reference field</option>
+                <option value="wise0855">WISE 0855 (approximate center)</option>
+                <option value="barnard">Barnard's Star (approximate center)</option>
+                <option value="epsilonindi">ε Indi (approximate center)</option>
+              </select>
+            </label>
+            <div class="field-grid">
+              <label class="field">Right ascension <span>deg</span><input id="ra" name="ra" value="127.69444" inputmode="decimal" autocomplete="off" required></label>
+              <label class="field">Declination <span>deg</span><input id="dec" name="dec" value="-39.17760" inputmode="decimal" autocomplete="off" required></label>
+            </div>
+            <label class="field">Search radius <span>arcsec</span><input id="radius" name="radius" type="number" min="1" max="1800" step="1" value="120" required></label>
+            <button id="search-button" class="button button-primary button-wide" type="submit">Load archive field <span aria-hidden="true">↗</span></button>
+            <p class="field-hint">Use decimal degrees. Approximate target presets are starting coordinates; confirm exact astrometry before quantitative work.</p>
+          </form>
+          <div class="query-status">
+            <div class="status-line"><span>Field tile</span><strong id="tile-value">Not loaded</strong></div>
+            <div class="status-line"><span>SPHEREx cube</span><strong id="cube-count">Awaiting query</strong></div>
+            <div class="status-line"><span>SIA2 records</span><strong id="sia-count">Awaiting query</strong></div>
+          </div>
+          <div class="provenance">
+            <div class="subheading"><span>PROVENANCE</span><span class="live-dot"></span></div>
+            <dl>
+              <div><dt>Archive</dt><dd id="prov-archive">NASA/IPAC IRSA</dd></div>
+              <div><dt>Preview</dt><dd id="prov-preview">Not loaded</dd></div>
+              <div><dt>FITS product</dt><dd id="prov-fits">Not discovered</dd></div>
+              <div><dt>Science validation</dt><dd id="prov-science">Not performed</dd></div>
+            </dl>
+          </div>
+        </aside>
+
+        <section class="panel viewer-panel" aria-labelledby="viewer-title">
+          <div class="viewer-header">
+            <div><p class="panel-index">02 / SPECTRAL VIEWER</p><h3 id="viewer-title">Wavelength comparison</h3></div>
+            <span id="viewer-status" class="state-pill" data-state="idle"><i></i><span>READY FOR FIELD</span></span>
+          </div>
+          <div class="mode-bar" role="group" aria-label="Comparison mode">
+            <button class="mode-button is-active" type="button" data-mode="blink" aria-pressed="true">Blink <kbd>1</kbd></button>
+            <button class="mode-button" type="button" data-mode="swipe" aria-pressed="false">Swipe <kbd>2</kbd></button>
+            <button class="mode-button" type="button" data-mode="side" aria-pressed="false">Side by side <kbd>3</kbd></button>
+            <button class="mode-button" type="button" data-mode="diff" aria-pressed="false">Difference <kbd>4</kbd></button>
+          </div>
+          <div id="frame-stage" class="frame-stage mode-blink" tabindex="0" role="group" aria-label="SPHEREx display-only channel comparison">
+            <div id="frame-empty" class="frame-empty">
+              <div class="empty-symbol">◎</div><strong>Load a field to begin</strong><p>Real IRSA HiPS frames will appear here. No placeholder sky image is used.</p>
+            </div>
+            <div id="layer-a" class="frame-layer frame-a"><img id="image-a" alt="SPHEREx channel A from NASA IPAC IRSA"><span id="label-a" class="frame-label">FRAME A</span></div>
+            <div id="layer-b" class="frame-layer frame-b"><img id="image-b" alt="SPHEREx channel B from NASA IPAC IRSA"><span id="label-b" class="frame-label">FRAME B</span></div>
+            <canvas id="difference-canvas" aria-label="Display-value difference between channels B and A"></canvas>
+            <div class="stage-corners"><span id="stage-tile">NORDER 5 / NO TILE</span><span>HIΡS PNG · DISPLAY ONLY</span></div>
+          </div>
+          <div class="viewer-footer">
+            <div class="viewer-readout"><span id="comparison-caption">A ↔ B · waiting for archive frames</span><small id="viewer-coordinates">No field selected</small></div>
+            <div class="viewer-actions">
+              <button id="blink-button" class="button button-small" type="button" disabled>Play blink</button>
+              <label class="compact-control">Rate <input id="blink-rate" type="range" min="1" max="3" step="0.5" value="1.5"><span id="blink-rate-value">1.5/s</span></label>
+              <label id="swipe-control" class="compact-control hidden">Divider <input id="swipe-range" type="range" min="5" max="95" value="50"><span id="swipe-value">50%</span></label>
+            </div>
+          </div>
+          <p id="difference-note" class="science-note hidden">Display-only difference: B − A is calculated from two palette-stretched 8-bit HiPS PNGs. It is not calibrated photometry, a registered FITS residual, or evidence of motion. The frames are different wavelengths from one co-added cube, not different dates.</p>
+          <p id="frame-error" class="inline-error hidden" role="alert"></p>
+        </section>
+
+        <aside class="panel inspector-panel">
+          <div class="panel-heading"><div><span class="panel-index">03</span><h3>Channel inspector</h3></div><span class="mini-tag">102 CH</span></div>
+          <div class="channel-control">
+            <div class="channel-title"><label for="channel-a">Frame A <span id="wave-a">— μm</span></label><strong id="channel-a-label">CH 011</strong></div>
+            <input id="channel-a" type="range" min="0" max="101" value="10" disabled>
+            <p id="channel-a-status" class="channel-status">Waiting for field</p>
+            <button id="load-a" class="button button-quiet" type="button" disabled>Load frame A</button>
+          </div>
+          <div class="channel-control">
+            <div class="channel-title"><label for="channel-b">Frame B <span id="wave-b">— μm</span></label><strong id="channel-b-label">CH 091</strong></div>
+            <input id="channel-b" type="range" min="0" max="101" value="90" disabled>
+            <p id="channel-b-status" class="channel-status">Waiting for field</p>
+            <button id="load-b" class="button button-quiet" type="button" disabled>Load frame B</button>
+          </div>
+          <div class="channel-tools">
+            <button id="swap-channels" type="button" disabled>Swap A ⇄ B</button>
+            <button id="reset-channels" type="button" disabled>Reset channels</button>
+          </div>
+          <div class="channel-footnote"><strong>Important</strong><p>Channel A/B are spectral planes in a single co-added product. The viewer does not infer a time baseline from wavelength.</p></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="wrap section-block lower-grid">
+      <section class="panel records-panel" aria-labelledby="records-title">
+        <div class="section-heading compact-heading"><div><p class="section-kicker">02 / ARCHIVE DISCOVERY</p><h2 id="records-title">SPHEREx records</h2></div><span id="records-summary" class="section-note">No query yet</span></div>
+        <div id="cube-products" class="record-summary"><div class="record-empty">DR1 All-Sky Cube discovery results will appear after a field query.</div></div>
+        <div id="sia-records" class="record-list"><div class="record-empty">SIA2 metadata has not been requested.</div></div>
+      </section>
+
+      <section id="time-domain" class="panel time-panel" aria-labelledby="time-title">
+        <div class="section-heading compact-heading"><div><p class="section-kicker">03 / SEPARATE TIME DOMAIN</p><h2 id="time-title">NEOWISE-R light curve</h2></div><button id="neowise-button" class="button button-small button-quiet" type="button" disabled>Query NEOWISE ↗</button></div>
+        <p class="time-intro">Dated single-exposure measurements from the NEOWISE-R catalog. This is a separate mission and instrument from the SPHEREx spectral cube.</p>
+        <div id="light-curve" class="light-curve">
+          <div class="chart-empty"><span>TIME SERIES</span><strong>Waiting for a field query</strong><small>Choose a position, then load NEOWISE measurements.</small></div>
+        </div>
+        <div id="light-curve-legend" class="chart-legend hidden"><span class="legend-w1">W1 magnitude</span><span class="legend-w2">W2 magnitude</span><span class="legend-note">Lower magnitude = brighter</span></div>
+        <div id="neowise-summary" class="time-summary">No measurements loaded</div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>MJD / Date</th><th>W1 mag</th><th>W2 mag</th><th>Quality</th><th>Scan / frame</th></tr></thead><tbody id="neowise-rows"><tr><td colspan="5" class="table-empty">NEOWISE data will appear here.</td></tr></tbody></table></div>
+        <p id="neowise-note" class="science-note">Catalog detections can include artifacts. Photometric quality, frame quality and contamination flags are shown for review; the app does not classify a moving object or confirm a source association.</p>
+      </section>
+    </section>
+
+    <section id="method" class="wrap section-block method-section">
+      <div class="section-heading"><div><p class="section-kicker">04 / METHOD</p><h2>Keep the evidence in context.</h2></div><p class="section-note">A repeatable path from archive query to review</p></div>
+      <div class="method-grid">
+        <article class="method-card"><span>01 / LOCATE</span><h3>Start with ICRS</h3><p>Coordinate validation and a bounded search radius locate the field in the public archive.</p></article>
+        <article class="method-card"><span>02 / INSPECT</span><h3>Read the spectrum</h3><p>Compare official wavelength-channel previews while keeping the product and preview provenance visible.</p></article>
+        <article class="method-card"><span>03 / REVIEW</span><h3>Separate time from colour</h3><p>Use dated NEOWISE-R single exposures for temporal context. A wavelength difference is not a multi-epoch residual.</p></article>
+      </div>
+      <div class="method-foot"><strong>Scientific limits</strong><p>HiPS PNGs are for display only. This demo does not perform calibrated multi-epoch subtraction, PSF matching, photometric scaling, uncertainty propagation, or automated candidate classification. FITS discovery is not the same as FITS validation.</p></div>
+    </section>
+
+    <section class="wrap sources-section">
+      <div class="source-links">
+        <a href="https://irsa.ipac.caltech.edu/spherex-archive-documentation/spherex-data-access/" target="_blank" rel="noreferrer">SPHEREx archive documentation ↗</a>
+        <a href="https://irsa.ipac.caltech.edu/Missions/wise.html" target="_blank" rel="noreferrer">NEOWISE data at IRSA ↗</a>
+        <a href="https://github.com/NihalShore/Open-sky-benchmark" target="_blank" rel="noreferrer">Source code ↗</a>
+      </div>
+      <footer class="footer"><strong>OPEN SKY / TIMELENS</strong><span>Independent research prototype · Not affiliated with or endorsed by NASA, Caltech or IPAC</span><span>© 2026</span></footer>
+    </section>
+  </main>
 </body>
 </html>
