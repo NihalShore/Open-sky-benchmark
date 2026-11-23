@@ -243,7 +243,31 @@ function populateEpochSelectors(items){
  $("epoch-status").className="tag "+(rows.length>1?"ok":"warn");
  renderEpochComparison();
 }
-function neowise(items){populateEpochSelectors(items);const box=$("neowise-list");box.replaceChildren();if(!items.length){box.textContent="No NEOWISE-R single-exposure sources returned for this position.";return;}items.slice(0,40).forEach(i=>{const row=document.createElement("div");row.style.cssText="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:11px";row.innerHTML="<div><strong>"+(i.source_id||"—")+"</strong><br><small>W"+(i.w1mpro!=null?"1":"2")+"</small></div><div>"+(i.mjd!=null?mjdDate(i.mjd):"—")+"</div><div>"+(i.w1mpro!=null?i.w1mpro.toFixed(3):i.w2mpro!=null?i.w2mpro.toFixed(3):"—")+" mag</div>";box.append(row);});}
+function neowise(items){
+ populateEpochSelectors(items);
+ const box=$("neowise-list");
+ box.replaceChildren();
+ if(!items.length){box.textContent="No NEOWISE-R single-exposure sources returned for this position.";return;}
+ items.slice(0,40).forEach(item=>{
+  const row=document.createElement("div");
+  row.style.cssText="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:11px";
+  const source=document.createElement("div");
+  const name=document.createElement("strong");
+  name.textContent=item.source_id||"NEOWISE detection";
+  const band=document.createElement("small");
+  const hasW1=item.w1_mag!==null&&item.w1_mag!==undefined;
+  const hasW2=item.w2_mag!==null&&item.w2_mag!==undefined;
+  band.textContent=hasW1?"W1":hasW2?"W2":"No magnitude";
+  source.append(name,document.createElement("br"),band);
+  const date=document.createElement("div");
+  date.textContent=item.mjd!=null?mjdDate(item.mjd):"—";
+  const magnitude=document.createElement("div");
+  const value=hasW1?Number(item.w1_mag):hasW2?Number(item.w2_mag):NaN;
+  magnitude.textContent=Number.isFinite(value)?value.toFixed(3)+" mag":"—";
+  row.append(source,date,magnitude);
+  box.append(row);
+ });
+}
 async function loadChannel(){
  if(!cubeTileId||!hipsMetadata)return;
  const idx=Number($("channel").value);
