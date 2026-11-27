@@ -1,9 +1,10 @@
 import { raDecToHipsTile } from "./healpix.mjs";
+import { REFERENCE_TARGET_PRESETS } from "./reference-targets.mjs";
 import { catalogAssociationsFor, passesIrsaQualityScreen, summarizeCatalogAssociations } from "./neowise.mjs";
 const API = "https://open-sky-timelens-api.vercel.app";
 const $ = (id) => document.getElementById(id);
 const BLANK = new Set([50, 51]);
-const PRESETS = { field:[127.69444,-39.1776], wise0855:[133.795,-7.245], barnard:[269.452,4.693], epsilonindi:[330.84,-56.786] };
+const PRESETS = { field:[127.69444,-39.1776], wise0855:[133.795,-7.245], barnard:[269.452,4.693], epsilonindi:[330.84,-56.786], ...REFERENCE_TARGET_PRESETS };
 const state = { query:null, tile:null, wavelengths:null, frames:{A:null,B:null}, mode:"blink", showB:false, playing:false, timer:null, rate:1.5, swipe:50, token:0, detections:[], cubeProductUrl:null, cubeProductId:null, fitsPreviewUrl:null, fitsPreviewChannel:null, fitsLoadingChannel:null, fitsRequest:0, reduced:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false };
 
 const setText=(id,value)=>$(id).textContent=value;
@@ -375,7 +376,7 @@ async function queryNeowise(){
 }
 function wire(){
  $("search-form").addEventListener("submit",loadField);
- $("target-preset").addEventListener("change",e=>{const p=PRESETS[e.target.value];if(p){$("ra").value=p[0];$("dec").value=p[1];}const notes={wise0855:"WISE 0855 — coldest known brown dwarf (~250 K): compare short near-IR (~1.5 μm) vs. 4.6 μm, then query NEOWISE-R to inspect its dated W2 measurements and sky drift.",barnard:"Barnard’s Star — highest proper-motion star (~10.3″/yr): inspect the field in SPHEREx, then query NEOWISE-R to see multi-year position drift across MJD.",epsilonindi:"ε Indi — nearby K-dwarf + brown dwarf system: compare short vs. long SPHEREx channels and review dated NEOWISE-R rows.",field:"Reference SPHEREx DR1 test field (NPIX 9822): verified against IRSA SIA2 and DR1 All-Sky Cube discovery."};setText("target-science-note",notes[e.target.value]||"Choose a reference preset or enter custom coordinates.");});
+ $("target-preset").addEventListener("change",e=>{const p=PRESETS[e.target.value];if(p){$("ra").value=p[0];$("dec").value=p[1];}const notes={wise0855:"WISE 0855 — coldest known brown dwarf (~250 K): compare short near-IR (~1.5 μm) vs. 4.6 μm, then query NEOWISE-R to inspect its dated W2 measurements and sky drift.",barnard:"Barnard’s Star — highest proper-motion star (~10.3″/yr): inspect the field in SPHEREx, then query NEOWISE-R to see multi-year position drift across MJD.",epsilonindi:"ε Indi — nearby K-dwarf + brown dwarf system: compare short vs. long SPHEREx channels and review dated NEOWISE-R rows.",rwAur:"RW Aur — T Tauri system. SIMBAD ICRS J2000 field center; proper motion is not propagated to the observing epoch.",rDra:"R Dra — Mira variable. SIMBAD ICRS J2000 field center; proper motion is not propagated to the observing epoch.",field:"Reference SPHEREx DR1 test field (NPIX 9822): verified against IRSA SIA2 and DR1 All-Sky Cube discovery."};setText("target-science-note",notes[e.target.value]||"Choose a reference preset or enter custom coordinates.");});
  $("neowise-quality-filter").addEventListener("change",renderFilteredMeasurements);
  document.querySelectorAll(".mode-button").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));
  $("channel-a").addEventListener("input",updateLabels);$("channel-b").addEventListener("input",updateLabels);
