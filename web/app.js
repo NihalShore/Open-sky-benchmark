@@ -1,9 +1,9 @@
-import { raDecToHipsTile } from "./healpix.mjs";
+import { raDecToHipsTile, raDecToHipsTilePixel } from "./healpix.mjs";
 const API = "https://open-sky-timelens-api.vercel.app";
 const $ = (id) => document.getElementById(id);
 const BLANK = new Set([50, 51]);
 const PRESETS = { field:[127.69444,-39.1776], wise0855:[133.795,-7.245], barnard:[269.452,4.693], epsilonindi:[330.84,-56.786] };
-const state = { query:null, tile:null, wavelengths:null, frames:{A:null,B:null}, mode:"blink", showB:false, playing:false, timer:null, rate:1.5, swipe:50, token:0, reduced:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false };
+const state = { query:null, tile:null, wavelengths:null, frames:{A:null,B:null}, mode:"blink", showB:false, playing:false, timer:null, rate:1.5, swipe:50, token:0, detections:[], reduced:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false };
 
 const setText=(id,value)=>$(id).textContent=value;
 const finite=(v)=>v!==null && v!==undefined && v!=="" && Number.isFinite(Number(v));
@@ -50,7 +50,7 @@ function drawDifference(){
  }
  ctx.putImageData(out,0,0);
 }
-function renderStage(){
+function renderStage(){\n const reticle=$("query-reticle");if(state.query&&state.tile!==null){const p=raDecToHipsTilePixel(state.query.ra_deg,state.query.dec_deg);reticle.style.left=(p.x/512*100)+"%";reticle.style.top=(p.y/512*100)+"%";stage.classList.toggle("has-query-reticle", $("reticle-toggle").checked);}else stage.classList.remove("has-query-reticle");
  const stage=$("frame-stage");stage.classList.remove("mode-blink","mode-swipe","mode-side","mode-diff","show-b","has-a","has-b");
  stage.classList.add("mode-"+state.mode);if(state.showB)stage.classList.add("show-b");
  if(state.frames.A)stage.classList.add("has-a");if(state.frames.B)stage.classList.add("has-b");
@@ -208,9 +208,9 @@ function renderMeasurements(detections){
     const tip=svgElement("title");tip.textContent=band+" "+mag.toFixed(3)+" mag · MJD "+row.mjd+" · quality "+(row.photometric_quality||"not supplied")+" · scan "+(row.scan_id??"—")+" / frame "+(row.frame_num??"—");point.append(tip);chart.append(point);});
   }
   $("light-curve").append(chart);$("light-curve-legend").classList.remove("hidden");
-  setText("neowise-summary",rows.length+" nearby single-exposure rows · W1: "+w1.length+" · W2: "+w2.length+" · span: "+(maxM-minM).toFixed(1)+" days · sources not cross-matched");
+  setText("neowise-summary","Showing "+filtered.length+" of "+detections.length+" nearby rows ("+(detections.length-filtered.length)+" filtered out) · "+rows.length+" dated rows · W1: "+w1.length+" · W2: "+w2.length+" · span: "+(maxM-minM).toFixed(1)+" days · sources not cross-matched");
  }
- const body=$("neowise-rows");body.replaceChildren();
+ renderSkyPosition(rows);\n const body=$("neowise-rows");body.replaceChildren();
  if(!rows.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.className="table-empty";td.textContent="No dated NEOWISE-R rows returned.";tr.append(td);body.append(tr);}
  else{
   rows.slice(0,100).forEach(r=>{const tr=document.createElement("tr"),cells=[Number(r.mjd).toFixed(3)+" / "+mjdDate(r.mjd),finite(r.w1_mag)?Number(r.w1_mag).toFixed(3):"—",finite(r.w2_mag)?Number(r.w2_mag).toFixed(3):"—",r.photometric_quality||r.frame_quality||"—",(r.scan_id??"—")+" / "+(r.frame_num??"—")];
@@ -218,7 +218,7 @@ function renderMeasurements(detections){
   if(rows.length>100){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.className="table-empty";td.textContent="Showing first 100 of "+rows.length+" rows.";tr.append(td);body.append(tr);}
  }
 }
-async function queryNeowise(){
+async function renderSkyPosition(rows){\n const box=$("sky-position");box.replaceChildren();const valid=rows.filter(r=>finite(r.ra_deg)&&finite(r.dec_deg)&&finite(r.mjd));if(!valid.length){box.append(chartEmpty("No coordinate rows","Archive rows did not include usable sky positions."));$("sky-position-legend").classList.add("hidden");return;}\n const w=800,h=300,pad=45,ras=valid.map(r=>{let d=Number(r.ra_deg)-state.query.ra_deg;if(d>180)d-=360;if(d< -180)d+=360;return d*Math.cos(state.query.dec_deg*Math.PI/180)*3600;}),decs=valid.map(r=>(Number(r.dec_deg)-state.query.dec_deg)*3600),minX=Math.min(...ras),maxX=Math.max(...ras),minY=Math.min(...decs),maxY=Math.max(...decs),sx=Math.max(maxX-minX,.2),sy=Math.max(maxY-minY,.2),x=v=>pad+(v-minX)/sx*(w-2*pad),y=v=>h-pad-(v-minY)/sy*(h-2*pad),dates=valid.map(r=>Number(r.mjd)),lo=Math.min(...dates),hi=Math.max(...dates);const svg=svgElement("svg",{viewBox:"0 0 800 300",role:"img","aria-label":"Sky offsets of nearby NEOWISE-R detections, not cross-matched"});svg.append(svgElement("line",{x1:x(0),x2:x(0),y1:pad,y2:h-pad,stroke:"#8da5b6","stroke-opacity":".4"}),svgElement("line",{x1:pad,x2:w-pad,y1:y(0),y2:y(0),stroke:"#8da5b6","stroke-opacity":".4"}));\n const interp=(v)=>{const t=(v-lo)/Math.max(hi-lo,1e-9);if(t<=.5){const u=t*2;return [121+(183-121)*u,231+(168-231)*u,223+(255-223)*u]}const u=(t-.5)*2;return [183+(255-183)*u,168+(196-168)*u,255+(124-255)*u]};valid.forEach((r,i)=>{const cx=x(ras[i]),cy=y(decs[i]),rgb=interp(Number(r.mjd)),p=svgElement("circle",{cx,cy,r:3.6,fill:"rgb("+rgb.join(",")+")"});const tip=svgElement("title");tip.textContent=mjdDate(r.mjd)+" · MJD "+Number(r.mjd).toFixed(3)+" · ΔRA "+ras[i].toFixed(3)+"″ · ΔDec "+decs[i].toFixed(3)+"″ · W1 "+(finite(r.w1_mag)?Number(r.w1_mag).toFixed(3):"—")+" · W2 "+(finite(r.w2_mag)?Number(r.w2_mag).toFixed(3):"—")+" · ph_qual "+(r.photometric_quality||"—")+" · cc_flags "+(r.contamination_flags||"—");p.append(tip);svg.append(p);});const tx=svgElement("text",{x:w/2,y:h-8,fill:"#9aabbd","font-size":10,"text-anchor":"middle"});tx.textContent="ΔRA cos δ (arcsec)";const ty=svgElement("text",{x:12,y:h/2,fill:"#9aabbd","font-size":10,"text-anchor":"middle",transform:"rotate(-90 12 "+h/2+")"});ty.textContent="ΔDec (arcsec)";svg.append(tx,ty);box.append(svg);const legend=$("sky-position-legend");legend.replaceChildren();legend.classList.remove("hidden");const text=document.createElement("span");text.textContent="MJD "+lo.toFixed(2)+" · "+mjdDate(lo);const gradient=document.createElement("span");gradient.className="sky-gradient";const end=document.createElement("span");end.textContent="MJD "+hi.toFixed(2)+" · "+mjdDate(hi);legend.append(text,gradient,end);\n}\nfunction queryNeowise(){
  if(!state.query)return;$("neowise-button").disabled=true;$("neowise-button").textContent="Querying…";
  $("light-curve").replaceChildren(chartEmpty("Querying NASA/IPAC IRSA","Retrieving dated NEOWISE-R catalog rows."));
  try{
@@ -230,7 +230,7 @@ async function queryNeowise(){
 }
 function wire(){
  $("search-form").addEventListener("submit",loadField);
- $("target-preset").addEventListener("change",e=>{const p=PRESETS[e.target.value];if(p){$("ra").value=p[0];$("dec").value=p[1];}});
+ $("target-preset").addEventListener("change",e=>{const p=PRESETS[e.target.value];if(p){$("ra").value=p[0];$("dec").value=p[1];}const notes={wise0855:"WISE 0855 — coldest known brown dwarf (~250 K): compare short near-IR (~1.5 μm) vs. 4.6 μm, then query NEOWISE-R to inspect its dated W2 measurements and sky drift.",barnard:"Barnard’s Star — highest proper-motion star (~10.3″/yr): inspect the field in SPHEREx, then query NEOWISE-R to see multi-year position drift across MJD.",epsilonindi:"ε Indi — nearby K-dwarf + brown dwarf system: compare short vs. long SPHEREx channels and review dated NEOWISE-R rows.",field:"Reference SPHEREx DR1 test field (NPIX 9822): verified against IRSA SIA2 and DR1 All-Sky Cube discovery."};setText("target-science-note",notes[e.target.value]||"Choose a reference preset or enter custom coordinates.");});\n $("neowise-quality-filter").addEventListener("change",renderFilteredMeasurements);$("reticle-toggle").addEventListener("change",renderStage);
  document.querySelectorAll(".mode-button").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));
  $("channel-a").addEventListener("input",updateLabels);$("channel-b").addEventListener("input",updateLabels);
  $("channel-a").addEventListener("change",()=>state.tile!==null&&loadFrame("A"));$("channel-b").addEventListener("change",()=>state.tile!==null&&loadFrame("B"));
