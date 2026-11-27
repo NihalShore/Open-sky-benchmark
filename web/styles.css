@@ -17,3 +17,24 @@ body,.record-card small,.data-table,.data-table th,.data-table td,.status-line,.
 .data-table th{font-size:12px}.data-table td{font-size:12px}.record-card small{font-size:12px}
 
 .quality-filter{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px}.quality-filter{padding:9px 0}.sky-caption{color:var(--muted);font-size:11px}.target-note{margin:4px 0 12px}.sky-position svg{width:100%;height:auto;display:block}.quality-filter input{accent-color:var(--cyan)}
+
+
+/* FITS preview is a separate FITS-derived display, not a HiPS frame. */
+.fits-preview-block{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);display:grid;gap:10px}
+.fits-preview-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.fits-preview-heading h4{font-size:14px;margin:4px 0 0}
+.fits-preview-intro{margin:0;color:var(--muted);font-size:11px;line-height:1.55}
+.fits-preview-frame{position:relative;width:100%;aspect-ratio:1/1;max-height:420px;overflow:hidden;border:1px solid var(--line2);border-radius:6px;background:#050a11}
+.fits-preview-frame[hidden]{display:none}
+.fits-preview-frame img{display:block;width:100%;height:100%;object-fit:contain}
+.fits-preview-reticle{position:absolute;display:none;width:28px;height:28px;transform:translate(-50%,-50%);pointer-events:none;border:1px solid rgba(121,231,223,.95);border-radius:50%;box-shadow:0 0 0 2px rgba(3,10,18,.55),0 0 12px rgba(121,231,223,.7)}
+.fits-preview-reticle:before,.fits-preview-reticle:after{content:"";position:absolute;background:rgba(121,231,223,.95);box-shadow:0 0 3px #06111b}
+.fits-preview-reticle:before{height:1px;width:42px;left:-8px;top:13px}
+.fits-preview-reticle:after{width:1px;height:42px;top:-8px;left:13px}
+.fits-preview-reticle.is-visible{display:block}
+.fits-preview-metadata{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+.fits-preview-metadata div{min-width:0;padding:8px 9px;border:1px solid var(--line);border-radius:5px;background:rgba(5,12,20,.38)}
+.fits-preview-metadata dt{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.fits-preview-metadata dd{margin:3px 0 0;font-size:11px;overflow-wrap:anywhere}
+.fits-preview-block .science-note{margin:0}
+@media(max-width:620px){.fits-preview-heading{align-items:flex-start;flex-direction:column}.fits-preview-metadata{grid-template-columns:1fr 1fr}}

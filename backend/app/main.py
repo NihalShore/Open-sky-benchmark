@@ -56,6 +56,8 @@ app.add_middleware(
         "X-SPHEREX-Source", "X-SPHEREX-Product", "X-SPHEREX-Channel",
         "X-SPHEREX-Coverage-Fraction", "X-SPHEREX-Units", "X-SPHEREX-Synthetic",
         "X-SPHEREX-Wavelength-Um", "X-SPHEREX-Flags-Nonzero-Pixels",
+        "X-SPHEREX-Query-Pixel-X", "X-SPHEREX-Query-Pixel-Y",
+        "X-SPHEREX-Image-Width", "X-SPHEREX-Image-Height",
     ],
     max_age=600,
 )
@@ -305,7 +307,13 @@ async def cube_preview(
                 raise HTTPException(status_code=404, detail="No DR1 cube tile covers this position")
             product_url = products[0]["access_url"]
         payload = await run_in_threadpool(download_cube, product_url)
-        metadata, plane = await run_in_threadpool(inspect_cube, payload, channel_index)
+        metadata, plane = await run_in_threadpool(
+            inspect_cube,
+            payload,
+            channel_index,
+            ra_deg=ra_deg,
+            dec_deg=dec_deg,
+        )
         if metadata_only:
             return JSONResponse(content=metadata)
         png = await run_in_threadpool(render_preview_png, plane)
@@ -329,4 +337,12 @@ async def cube_preview(
     }
     if metadata["wavelength_um"] is not None:
         headers["X-SPHEREX-Wavelength-Um"] = str(metadata["wavelength_um"])
+    image_shape = metadata.get("image_shape")
+    if isinstance(image_shape, list) and len(image_shape) == 2:
+        headers["X-SPHEREX-Image-Height"] = str(image_shape[0])
+        headers["X-SPHEREX-Image-Width"] = str(image_shape[1])
+    query_pixel = metadata.get("query_pixel")
+    if isinstance(query_pixel, dict):
+        headers["X-SPHEREX-Query-Pixel-X"] = str(query_pixel["x"])
+        headers["X-SPHEREX-Query-Pixel-Y"] = str(query_pixel["y"])
     return Response(content=png, media_type="image/png", headers=headers)

@@ -145,6 +145,28 @@
             <button id="swap-channels" type="button" disabled>Swap A ⇄ B</button>
             <button id="reset-channels" type="button" disabled>Reset channels</button>
           </div>
+          <section class="fits-preview-block" aria-labelledby="fits-preview-title">
+            <div class="fits-preview-heading">
+              <div><span class="panel-index">FITS / INSPECT</span><h4 id="fits-preview-title">Archive-backed FITS preview</h4></div>
+              <button id="load-fits-preview" class="button button-small button-quiet" type="button" disabled>Load FITS preview · CH 011</button>
+            </div>
+            <p class="fits-preview-intro">Separate from the HiPS viewer. Downloads the discovered DR1 cube, inspects its FITS extensions and renders the selected channel.</p>
+            <p id="fits-preview-status" class="channel-status" role="status">Waiting for a discovered FITS product</p>
+            <div id="fits-preview-frame" class="fits-preview-frame" hidden>
+              <img id="fits-preview-image" alt="SPHEREx DR1 FITS channel preview">
+              <span id="fits-preview-reticle" class="fits-preview-reticle" aria-hidden="true"></span>
+            </div>
+            <dl class="fits-preview-metadata">
+              <div><dt>Product</dt><dd id="fits-preview-product">Not discovered</dd></div>
+              <div><dt>Channel</dt><dd id="fits-preview-channel">—</dd></div>
+              <div><dt>Coverage (NHITS)</dt><dd id="fits-preview-coverage">—</dd></div>
+              <div><dt>Nonzero FLAGS</dt><dd id="fits-preview-flags">—</dd></div>
+              <div><dt>Units</dt><dd id="fits-preview-units">—</dd></div>
+            </dl>
+            <p id="fits-preview-wcs" class="field-hint">The query marker appears only when the FITS celestial WCS maps the requested position inside the image.</p>
+            <p id="fits-preview-error" class="inline-error hidden" role="alert"></p>
+            <p class="science-note">Display-only grayscale rendering of FITS pixel values. It is not calibrated photometry or a scientifically validated detection. Science validation has not been performed.</p>
+          </section>
           <div class="channel-footnote"><strong>Important</strong><p>Channel A/B are spectral planes in a single co-added product. The viewer does not infer a time baseline from wavelength.</p></div>
         </aside>
       </div>
