@@ -50,7 +50,7 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
   <img src="docs/architecture.svg" alt="TimeLens system architecture" width="100%">
 </p>
 
-## Live demo\n\n**Try TimeLens:** [open the live Vercel workspace](https://open-sky-timelens.vercel.app/). The web workspace queries NASA/IPAC IRSA for SPHEREx HiPS frames, cube metadata and SIA2 records, with a separate NEOWISE-R query. Channel blink/swipe/difference compares wavelengths within a co-added cube; it is not multi-epoch analysis.\n\n## Project status
+## Live demo\n\n<https://open-sky-timelens.vercel.app/> — deployed archive-backed web explorer. The FastAPI service is deployed at <https://open-sky-timelens-api.vercel.app>.\n\n## Project status
 
 > **Research prototype · Public archive explorer + FastAPI service**
 >
@@ -62,7 +62,7 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
 | SPHEREx SIA2 and DR1 cube discovery | PSF matching or photometric scaling across epochs |
 | NEOWISE-R single-exposure query | Uncertainty-map propagation |
 | FITS channel preview with coverage masking | Automated moving-object classification or Planet X detection |
-| WCS reprojection and difference primitives | Verified live end-to-end science result or hosted deployment |
+| WCS reprojection and difference primitives | Calibrated multi-epoch science validation or automated source association |
 
 ## Quick start
 
@@ -181,7 +181,7 @@ TimeLens is intentionally conservative about what its outputs mean:
 - [x] DR1 All-Sky Cube tile discovery and channel preview
 - [x] NEOWISE-R single-exposure source query
 - [x] WCS reprojection and coverage-aware difference primitives
-- [ ] Public interactive sky viewer and blink comparison
+- [x] Deployed archive-backed interactive viewer and blink/swipe comparison
 - [ ] Photometric / PSF matching and uncertainty propagation
 - [ ] Reproducible candidate-evidence report
 
