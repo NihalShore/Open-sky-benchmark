@@ -42,7 +42,7 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
 |---|---|
 | **SPHEREx discovery** | IRSA SIA2 searches for DR1 / QR3 spectral-image metadata |
 | **SPHEREx DR1 cube** | Tile discovery, bounded FITS retrieval, channel extraction, coverage-masked PNG preview |
-| **NEOWISE-R** | Single-exposure source measurements ordered by Modified Julian Date, with quality fields retained |
+| **NEOWISE-R** | Single-exposure measurements with quality metadata and AllWISE / 2MASS positional-association evidence |
 | **WCS registration** | Bilinear reprojection of a target image onto a reference celestial grid |
 | **Difference analysis** | Common-coverage masking and robust residual ranking using median absolute deviation |
 
