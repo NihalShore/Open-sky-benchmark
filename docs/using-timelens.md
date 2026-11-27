@@ -6,7 +6,7 @@ It does not automatically detect Planet X or confirm a moving object.
 
 ## 1. Open a field
 
-Open the [live TimeLens workspace](https://open-sky-timelens.vercel.app/). Choose a reference target or enter ICRS right ascension and declination in decimal degrees. Set a search radius, then select **Load archive field**.
+Open the [live TimeLens workspace](https://open-sky-timelens.vercel.app/). Choose a reference target or enter ICRS right ascension and declination in decimal degrees. The named presets include Barnard's Star, WISE 0855, the Epsilon Indi system, RW Aur and R Dra. RW Aur and R Dra use SIMBAD ICRS J2000 field centers and are not proper-motion propagated to the observing epoch; confirm current astrometry before quantitative work. Set a search radius, then select **Load archive field**.
 
 The workspace requests three separate archive resources:
 
