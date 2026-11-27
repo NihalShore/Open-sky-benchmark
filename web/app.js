@@ -3,7 +3,7 @@ const API = "https://open-sky-timelens-api.vercel.app";
 const $ = (id) => document.getElementById(id);
 const BLANK = new Set([50, 51]);
 const PRESETS = { field:[127.69444,-39.1776], wise0855:[133.795,-7.245], barnard:[269.452,4.693], epsilonindi:[330.84,-56.786] };
-const state = { query:null, tile:null, wavelengths:null, frames:{A:null,B:null}, mode:"blink", showB:false, playing:false, timer:null, rate:1.5, swipe:50, token:0, detections:[], cubeProductUrl:null, cubeProductId:null, fitsPreviewUrl:null, fitsPreviewChannel:null, fitsRequest:0, reduced:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false };
+const state = { query:null, tile:null, wavelengths:null, frames:{A:null,B:null}, mode:"blink", showB:false, playing:false, timer:null, rate:1.5, swipe:50, token:0, detections:[], cubeProductUrl:null, cubeProductId:null, fitsPreviewUrl:null, fitsPreviewChannel:null, fitsLoadingChannel:null, fitsRequest:0, reduced:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false };
 
 const setText=(id,value)=>$(id).textContent=value;
 const finite=(v)=>v!==null && v!==undefined && v!=="" && Number.isFinite(Number(v));
@@ -28,6 +28,11 @@ function updateLabels(){
  }
  const selected=Number($("channel-a").value);
  $("load-fits-preview").textContent="Load FITS preview · "+channelLabel(selected);
+ if(state.fitsLoadingChannel!==null&&state.fitsLoadingChannel!==selected){
+  state.fitsRequest++;state.fitsLoadingChannel=null;
+  $("load-fits-preview").disabled=!state.cubeProductUrl;
+  setText("fits-preview-status","Channel changed while loading · load the current channel again");
+ }
  if(state.fitsPreviewUrl&&state.fitsPreviewChannel!==selected){
   clearFitsPreview("Channel changed · load the FITS preview again");
  }
@@ -125,7 +130,7 @@ function chartEmpty(title,subtitle){
 }
 function clearFitsPreview(message="No FITS preview loaded"){
  if(state.fitsPreviewUrl)URL.revokeObjectURL(state.fitsPreviewUrl);
- state.fitsPreviewUrl=null;state.fitsPreviewChannel=null;state.fitsRequest++;
+ state.fitsPreviewUrl=null;state.fitsPreviewChannel=null;state.fitsLoadingChannel=null;state.fitsRequest++;
  $("fits-preview-image").removeAttribute("src");
  $("fits-preview-frame").hidden=true;
  $("fits-preview-reticle").classList.remove("is-visible");
@@ -139,6 +144,7 @@ function clearFitsPreview(message="No FITS preview loaded"){
 function clearResults(){
  state.cubeProductUrl=null;state.cubeProductId=null;
  $("load-fits-preview").disabled=true;
+ setText("fits-preview-product","Waiting for archive response");
  clearFitsPreview("Waiting for a discovered FITS product");
  setText("cube-count","Searching…");setText("sia-count","Searching…");setText("records-summary","Archive requests running");
  $("cube-products").replaceChildren(emptyBox("Contacting NASA/IPAC IRSA…"));$("sia-records").replaceChildren(emptyBox("Contacting NASA/IPAC IRSA…"));
@@ -179,7 +185,7 @@ async function loadField(event){
 }
 function renderCubeProducts(products){
  setText("cube-count",products.length+" product"+(products.length===1?"":"s"));$("cube-products").replaceChildren();
- if(!products.length){$("cube-products").append(emptyBox("IRSA returned no DR1 All-Sky Cube FITS product for this search. The all-sky HiPS preview is reported separately."));setText("prov-fits","No product returned");$("load-fits-preview").disabled=true;return;}
+ if(!products.length){$("cube-products").append(emptyBox("IRSA returned no DR1 All-Sky Cube FITS product for this search. The all-sky HiPS preview is reported separately."));setText("prov-fits","No product returned");$("load-fits-preview").disabled=true;setText("fits-preview-product","No FITS product discovered");return;}
  const usable=products.find(p=>typeof p.access_url==="string"&&p.access_url.startsWith("https://irsa.ipac.caltech.edu/"));
  if(usable){
   state.cubeProductUrl=usable.access_url;
@@ -221,6 +227,7 @@ async function loadFitsPreview(){
   access_url:state.cubeProductUrl
  });
  $("load-fits-preview").disabled=true;
+ state.fitsLoadingChannel=channel;
  $("fits-preview-error").classList.add("hidden");
  setText("fits-preview-status","Downloading and inspecting the official IRSA FITS product…");
  try{
@@ -238,8 +245,10 @@ async function loadFitsPreview(){
   image.alt="Display-only grayscale preview from SPHEREx DR1 FITS channel "+(channel+1);
   $("fits-preview-frame").hidden=false;
 
-  const coverage=Number(response.headers.get("x-spherex-coverage-fraction"));
-  const flags=Number(response.headers.get("x-spherex-flags-nonzero-pixels"));
+  const coverageHeader=response.headers.get("x-spherex-coverage-fraction");
+  const flagsHeader=response.headers.get("x-spherex-flags-nonzero-pixels");
+  const coverage=coverageHeader===null?NaN:Number(coverageHeader);
+  const flags=flagsHeader===null?NaN:Number(flagsHeader);
   const units=response.headers.get("x-spherex-units")||"Units not supplied";
   const wavelengthUm=response.headers.get("x-spherex-wavelength-um");
   setText("fits-preview-channel",channelLabel(channel)+(finite(wavelengthUm)?" · "+Number(wavelengthUm).toFixed(3)+" μm":""));
@@ -272,7 +281,10 @@ async function loadFitsPreview(){
   $("fits-preview-error").classList.remove("hidden");
   setText("prov-fits","Download or inspection failed");
  }finally{
-  if(queryToken===state.token&&requestToken===state.fitsRequest)$("load-fits-preview").disabled=!state.cubeProductUrl;
+  if(queryToken===state.token&&requestToken===state.fitsRequest){
+   state.fitsLoadingChannel=null;
+   $("load-fits-preview").disabled=!state.cubeProductUrl;
+  }
  }
 }
 function mjdDate(value){if(!finite(value))return"date unavailable";const d=new Date((Number(value)-40587)*86400000);return Number.isNaN(d.getTime())?"date unavailable":d.toISOString().slice(0,10);}
