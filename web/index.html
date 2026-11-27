@@ -109,7 +109,7 @@
               <div class="empty-symbol">◎</div><strong>Load a field to begin</strong><p>Real IRSA HiPS frames will appear here. No placeholder sky image is used.</p>
             </div>
             <div id="layer-a" class="frame-layer frame-a"><img id="image-a" alt="SPHEREx channel A from NASA IPAC IRSA"><span id="label-a" class="frame-label">FRAME A</span></div>
-            <div id="layer-b" class="frame-layer frame-b"><img id="image-b" alt="SPHEREx channel B from NASA IPAC IRSA"><span id="label-b" class="frame-label">FRAME B</span></div>
+            <div id="swipe-divider" aria-hidden="true"></div><div id="layer-b" class="frame-layer frame-b"><img id="image-b" alt="SPHEREx channel B from NASA IPAC IRSA"><span id="label-b" class="frame-label">FRAME B</span></div>
             <canvas id="difference-canvas" aria-label="Display-value difference between channels B and A"></canvas>
             <div class="stage-corners"><span id="stage-tile">NORDER 5 / NO TILE</span><span>HIΡS PNG · DISPLAY ONLY</span></div>
           </div>
@@ -117,7 +117,7 @@
             <div class="viewer-readout"><span id="comparison-caption">A ↔ B · waiting for archive frames</span><small id="viewer-coordinates">No field selected</small></div>
             <div class="viewer-actions">
               <button id="blink-button" class="button button-small" type="button" disabled>Play blink</button>
-              <label class="compact-control">Rate <input id="blink-rate" type="range" min="1" max="3" step="0.5" value="1.5"><span id="blink-rate-value">1.5/s</span></label>
+              <label id="blink-rate-control" class="compact-control">Rate <input id="blink-rate" type="range" min="1" max="3" step="0.5" value="1.5"><span id="blink-rate-value">1.5/s</span></label>
               <label id="swipe-control" class="compact-control hidden">Divider <input id="swipe-range" type="range" min="5" max="95" value="50"><span id="swipe-value">50%</span></label>
             </div>
           </div>

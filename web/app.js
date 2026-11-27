@@ -55,9 +55,9 @@ function renderStage(){
  stage.classList.add("mode-"+state.mode);if(state.showB)stage.classList.add("show-b");
  if(state.frames.A)stage.classList.add("has-a");if(state.frames.B)stage.classList.add("has-b");
  $("frame-empty").classList.toggle("hidden",Boolean(state.frames.A||state.frames.B));
- $("layer-b").style.clipPath=state.mode==="swipe"?"inset(0 0 0 "+state.swipe+"%)":"none";
+ $("layer-b").style.clipPath=state.mode==="swipe"?"inset(0 0 0 "+state.swipe+"%)":"none";stage.style.setProperty("--swipe-position",state.swipe+"%");$("label-b").style.left=state.mode==="swipe"?"calc("+state.swipe+"% + 10px)":"10px";
  $("difference-canvas").style.display=state.mode==="diff"&&state.frames.A&&state.frames.B?"block":"none";
- $("swipe-control").classList.toggle("hidden",state.mode!=="swipe");
+ $("swipe-control").classList.toggle("hidden",state.mode!=="swipe");$("blink-rate-control").classList.toggle("hidden",state.mode!=="blink");
  $("difference-note").classList.toggle("hidden",state.mode!=="diff");
  $("blink-button").classList.toggle("hidden",state.mode!=="blink");
  if(state.mode==="diff")drawDifference();updateCaption();
@@ -238,8 +238,8 @@ function wire(){
  $("swap-channels").addEventListener("click",()=>{const a=$("channel-a").value;$("channel-a").value=$("channel-b").value;$("channel-b").value=a;updateLabels();if(state.tile!==null){loadFrame("A");loadFrame("B");}});
  $("reset-channels").addEventListener("click",()=>{$("channel-a").value="10";$("channel-b").value="90";updateLabels();if(state.tile!==null){loadFrame("A");loadFrame("B");}});
  $("blink-button").addEventListener("click",toggleBlink);
- $("blink-rate").addEventListener("input",e=>{state.rate=Number(e.target.value);text("blink-rate-value",state.rate.toFixed(1)+"/s");if(state.playing){stopBlink();toggleBlink();}});
- $("swipe-range").addEventListener("input",e=>{state.swipe=Number(e.target.value);$("layer-b").style.clipPath="inset(0 0 0 "+state.swipe+"%)";text("swipe-value",state.swipe+"%");});
+ $("blink-rate").addEventListener("input",e=>{state.rate=Number(e.target.value);setText("blink-rate-value",state.rate.toFixed(1)+"/s");if(state.playing){stopBlink();toggleBlink();}});
+ $("swipe-range").addEventListener("input",e=>{state.swipe=Number(e.target.value);$("layer-b").style.clipPath="inset(0 0 0 "+state.swipe+"%)";$("frame-stage").style.setProperty("--swipe-position",state.swipe+"%");$("label-b").style.left="calc("+state.swipe+"% + 10px)";setText("swipe-value",state.swipe+"%");});
  $("neowise-button").addEventListener("click",queryNeowise);
  $("frame-stage").addEventListener("keydown",e=>{if(e.target!==$("frame-stage")||e.ctrlKey||e.metaKey||e.altKey)return;
   if(["1","2","3","4"].includes(e.key)){setMode(["blink","swipe","side","diff"][Number(e.key)-1]);e.preventDefault();}
@@ -249,7 +249,7 @@ function wire(){
 }
 async function init(){
  wire();status("api-status","checking","CHECKING API");
- try{const response=await api("/api/v1/health",{},12000),health=await response.json();if(health.status!=="ok")throw new Error("Unexpected health response");status("api-status","online","API ONLINE");}
+ try{const response=await api("/api/v1/health",{},12000),health=await response.json();if(health.status!=="ok")throw new Error("Unexpected health response");status("api-status","online","API ONLINE");$("target-preset").value="field";$("ra").value=PRESETS.field[0];$("dec").value=PRESETS.field[1];await loadField();}
  catch(e){status("api-status","offline","API OFFLINE");status("viewer-status","error","API NOT CONNECTED");notice("TimeLens API health check failed: "+e.message+". Live archive data cannot be loaded.");}
  try{await loadMetadata();}catch(e){setText("prov-preview","Wavelength metadata unavailable");notice("IRSA wavelength metadata could not be loaded: "+e.message);}
  renderStage();

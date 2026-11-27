@@ -1,15 +1,9 @@
-# TimeLens web UI
+# TimeLens web workspace
 
 Live workspace: https://open-sky-timelens.vercel.app/
 
-This static frontend queries the TimeLens API at https://open-sky-timelens-api.vercel.app and NASA/IPAC IRSA archive-backed endpoints.
+The deployed static frontend connects to the TimeLens API and public NASA/IPAC IRSA archive services. It provides coordinate-based discovery, real SPHEREx HiPS PNG channel previews, spectral-channel blink/swipe/side-by-side/display-value comparisons, and separate NEOWISE-R catalog measurements.
 
-The UI currently supports:
-- Coordinate-based archive discovery (SPHEREx SIA2 and DR1 cube products)
-- Real SPHEREx HiPS channel previews
-- Blink, swipe, side-by-side, and display-value difference between two spectral channels from the same co-added cube
-- Separate NEOWISE-R dated catalog query and plotting
-
-The spectral comparison is not a multi-epoch comparison. The frontend does not yet expose the FITS/WCS registration and calibrated multi-epoch difference pipeline. HiPS PNG comparisons are display-only and should not be interpreted as calibrated science.
+HiPS PNGs are display-only and are not calibrated FITS science images. Channel comparisons are different wavelengths within a co-added cube, not a time baseline. FITS discovery does not mean validation or analysis. NEOWISE-R results are separate dated catalog rows; the workspace does not perform source association or claim moving-object detection.
 
 Deploy this directory as the Vercel frontend project root.
