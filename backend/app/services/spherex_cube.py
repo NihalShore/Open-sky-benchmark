@@ -12,7 +12,9 @@ from urllib.parse import urlparse
 
 import numpy as np
 import requests
+from astropy.coordinates import SkyCoord
 from astropy.io import fits
+from astropy.wcs import WCS
 from PIL import Image
 
 from app.services.irsa import normalize_observation, query_sia
@@ -162,8 +164,16 @@ def _channel_value(row: Any, key: str) -> float | int | None:
         return None
 
 
-def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np.ndarray]:
+def inspect_cube(
+    payload: bytes,
+    channel_index: int,
+    *,
+    ra_deg: float | None = None,
+    dec_deg: float | None = None,
+) -> tuple[dict[str, Any], np.ndarray]:
     """Validate a DR1 cube and return metadata plus a coverage-masked image plane."""
+    if (ra_deg is None) != (dec_deg is None):
+        raise CubeDataError("ra_deg and dec_deg must be supplied together")
     if channel_index < 0:
         raise CubeDataError("channel_index must be non-negative")
 
@@ -228,6 +238,27 @@ def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np
             "dataset_doi": "10.26131/IRSA679",
             "synthetic": False,
         }
+        metadata["query_pixel"] = None
+        metadata["query_pixel_status"] = "not_requested"
+        if ra_deg is not None and dec_deg is not None:
+            try:
+                celestial_wcs = WCS(by_name["IMAGE"].header, fobj=hdus).celestial
+                query_position = SkyCoord(ra=ra_deg, dec=dec_deg, unit="deg", frame="icrs")
+                pixel_x, pixel_y = celestial_wcs.world_to_pixel(query_position)
+                if np.isfinite(pixel_x) and np.isfinite(pixel_y):
+                    if 0 <= pixel_x < plane.shape[1] and 0 <= pixel_y < plane.shape[0]:
+                        metadata["query_pixel"] = {
+                            "x": float(pixel_x),
+                            "y": float(pixel_y),
+                        }
+                        metadata["query_pixel_status"] = "available"
+                    else:
+                        metadata["query_pixel_status"] = "outside_image"
+                else:
+                    metadata["query_pixel_status"] = "unavailable"
+            except Exception:
+                metadata["query_pixel_status"] = "unavailable"
+
         if valid.size:
             metadata["value_percentiles"] = {
                 "p01": float(np.nanpercentile(valid, 1)),
@@ -238,15 +269,21 @@ def inspect_cube(payload: bytes, channel_index: int) -> tuple[dict[str, Any], np
 
 
 def render_preview_png(plane: np.ndarray) -> bytes:
-    """Render a display-only grayscale preview using robust percentile scaling."""
-    valid = plane[np.isfinite(plane)]
+    """Render a display-only grayscale PNG with uncovered pixels transparent."""
+    valid_mask = np.isfinite(plane)
+    valid = plane[valid_mask]
     if valid.size == 0:
         raise CubeDataError("Selected channel contains no covered finite pixels")
     low, high = np.nanpercentile(valid, [1, 99])
     if not np.isfinite(low) or not np.isfinite(high) or high <= low:
         high = low + 1.0
-    scaled = np.clip((np.nan_to_num(plane, nan=low) - low) / (high - low), 0, 1)
+    display_values = np.where(valid_mask, plane, low)
+    scaled = np.clip((display_values - low) / (high - low), 0, 1)
     pixels = np.asarray(scaled * 255, dtype=np.uint8)
+    alpha = valid_mask.astype(np.uint8) * 255
+    rgba = np.dstack((pixels, pixels, pixels, alpha))
     output = BytesIO()
-    Image.fromarray(pixels, mode="L").save(output, format="PNG")
+    # Keep the FITS array row order. The WCS pixel mapping uses the same
+    # zero-based (x, y) coordinates as the rows and columns in this PNG.
+    Image.fromarray(rgba).save(output, format="PNG")
     return output.getvalue()
