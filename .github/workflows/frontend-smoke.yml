@@ -21,5 +21,9 @@ jobs:
           node-version: "22"
       - name: Check browser module syntax
         run: node --check web/app.js
+      - name: Check undefined identifiers
+        run: |
+          npm install --no-save eslint globals
+          npx eslint web/app.js
       - name: Test HEALPix coordinate lookup
         run: node --test web/tests/healpix.test.mjs
