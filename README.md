@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="#what-it-does">Capabilities</a> ·
+  <a href="https://open-sky-timelens.vercel.app/" target="_blank">Live demo</a> ·\n  <a href="#what-it-does">Capabilities</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#api-at-a-glance">API</a> ·
   <a href="backend/README.md">Backend guide</a> ·
@@ -50,7 +50,7 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
   <img src="docs/architecture.svg" alt="TimeLens system architecture" width="100%">
 </p>
 
-## Project status
+## Live demo\n\n**Try TimeLens:** [open the live Vercel workspace](https://open-sky-timelens.vercel.app/). The web workspace queries NASA/IPAC IRSA for SPHEREx HiPS frames, cube metadata and SIA2 records, with a separate NEOWISE-R query. Channel blink/swipe/difference compares wavelengths within a co-added cube; it is not multi-epoch analysis.\n\n## Project status
 
 > **Research prototype · Public archive explorer + FastAPI service**
 >
