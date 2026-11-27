@@ -3,7 +3,7 @@ const API = "https://open-sky-timelens-api.vercel.app";
 const $ = (id) => document.getElementById(id);
 const BLANK = new Set([50, 51]);
 const PRESETS = { field:[127.69444,-39.1776], wise0855:[133.795,-7.245], barnard:[269.452,4.693], epsilonindi:[330.84,-56.786] };
-const state = { query:null, tile:null, wavelengths:null, frames:{A:null,B:null}, mode:"blink", showB:false, playing:false, timer:null, rate:1.5, swipe:50, token:0, detections:[], reduced:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false };
+const state = { query:null, tile:null, wavelengths:null, frames:{A:null,B:null}, mode:"blink", showB:false, playing:false, timer:null, rate:1.5, swipe:50, token:0, detections:[], cubeProductUrl:null, cubeProductId:null, fitsPreviewUrl:null, fitsPreviewChannel:null, fitsRequest:0, reduced:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false };
 
 const setText=(id,value)=>$(id).textContent=value;
 const finite=(v)=>v!==null && v!==undefined && v!=="" && Number.isFinite(Number(v));
@@ -25,6 +25,11 @@ function updateLabels(){
  for(const slot of ["A","B"]){const key=slot.toLowerCase(),i=Number($("channel-"+key).value);
   setText("channel-"+key+"-label",channelLabel(i));setText("wave-"+key,wavelength(i));
   if(state.frames[slot]?.channel!==i)setText("channel-"+key+"-status","Channel changed · load frame to refresh");
+ }
+ const selected=Number($("channel-a").value);
+ $("load-fits-preview").textContent="Load FITS preview · "+channelLabel(selected);
+ if(state.fitsPreviewUrl&&state.fitsPreviewChannel!==selected){
+  clearFitsPreview("Channel changed · load the FITS preview again");
  }
  updateCaption();
 }
@@ -118,7 +123,23 @@ function chartEmpty(title,subtitle){
  for(const [tag,value] of [["span","TIME-DOMAIN MEASUREMENTS"],["strong",title],["small",subtitle]]){const el=document.createElement(tag);el.textContent=value;box.append(el);}
  return box;
 }
+function clearFitsPreview(message="No FITS preview loaded"){
+ if(state.fitsPreviewUrl)URL.revokeObjectURL(state.fitsPreviewUrl);
+ state.fitsPreviewUrl=null;state.fitsPreviewChannel=null;state.fitsRequest++;
+ $("fits-preview-image").removeAttribute("src");
+ $("fits-preview-frame").hidden=true;
+ $("fits-preview-reticle").classList.remove("is-visible");
+ $("fits-preview-error").classList.add("hidden");
+ setText("fits-preview-status",message);
+ setText("fits-preview-channel","—");
+ setText("fits-preview-coverage","—");
+ setText("fits-preview-flags","—");
+ setText("fits-preview-units","—");
+}
 function clearResults(){
+ state.cubeProductUrl=null;state.cubeProductId=null;
+ $("load-fits-preview").disabled=true;
+ clearFitsPreview("Waiting for a discovered FITS product");
  setText("cube-count","Searching…");setText("sia-count","Searching…");setText("records-summary","Archive requests running");
  $("cube-products").replaceChildren(emptyBox("Contacting NASA/IPAC IRSA…"));$("sia-records").replaceChildren(emptyBox("Contacting NASA/IPAC IRSA…"));
  setText("prov-fits","Checking archive");setText("prov-preview","Requesting frames");setText("prov-science","Not performed");
@@ -158,8 +179,19 @@ async function loadField(event){
 }
 function renderCubeProducts(products){
  setText("cube-count",products.length+" product"+(products.length===1?"":"s"));$("cube-products").replaceChildren();
- if(!products.length){$("cube-products").append(emptyBox("IRSA returned no DR1 All-Sky Cube FITS product for this search. The all-sky HiPS preview is reported separately."));setText("prov-fits","No product returned");return;}
- setText("prov-fits","Discovered · not validated");
+ if(!products.length){$("cube-products").append(emptyBox("IRSA returned no DR1 All-Sky Cube FITS product for this search. The all-sky HiPS preview is reported separately."));setText("prov-fits","No product returned");$("load-fits-preview").disabled=true;return;}
+ const usable=products.find(p=>typeof p.access_url==="string"&&p.access_url.startsWith("https://irsa.ipac.caltech.edu/"));
+ if(usable){
+  state.cubeProductUrl=usable.access_url;
+  state.cubeProductId=usable.observation_id||"SPHEREx DR1 All-Sky Cube";
+  $("load-fits-preview").disabled=false;
+  setText("fits-preview-product",state.cubeProductId+" · NASA/IPAC IRSA");
+  setText("fits-preview-status","FITS product discovered · ready to inspect a channel");
+ }else{
+  $("load-fits-preview").disabled=true;
+  setText("fits-preview-status","No trusted FITS access URL was returned for this search");
+ }
+ setText("prov-fits","Discovered · not inspected");
  products.slice(0,8).forEach(p=>{
   const card=document.createElement("article"),details=document.createElement("div");card.className="record-card";
   const title=document.createElement("strong"),meta=document.createElement("small");
@@ -169,6 +201,79 @@ function renderCubeProducts(products){
   $("cube-products").append(card);
  });
  const note=document.createElement("p");note.className="field-hint";note.textContent="A returned product record confirms discovery only. The FITS file has not been downloaded or scientifically validated in this view.";$("cube-products").append(note);
+}
+async function loadFitsPreview(){
+ if(!state.query||!state.cubeProductUrl){
+  setText("fits-preview-status","Run an archive search with a DR1 FITS product first");
+  return;
+ }
+ const channel=Number($("channel-a").value);
+ if(BLANK.has(channel)){
+  clearFitsPreview("Channel "+(channel+1)+" is a known blank channel; choose another channel");
+  return;
+ }
+ const queryToken=state.token,requestToken=++state.fitsRequest;
+ const params=new URLSearchParams({
+  ra_deg:String(state.query.ra_deg),
+  dec_deg:String(state.query.dec_deg),
+  radius_arcsec:String(state.query.radius_arcsec),
+  channel_index:String(channel),
+  access_url:state.cubeProductUrl
+ });
+ $("load-fits-preview").disabled=true;
+ $("fits-preview-error").classList.add("hidden");
+ setText("fits-preview-status","Downloading and inspecting the official IRSA FITS product…");
+ try{
+  const response=await api("/api/v1/cube/preview?"+params,{},120000);
+  if(!response.headers.get("content-type")?.toLowerCase().includes("image/png")){
+   throw new Error("The FITS preview endpoint did not return a PNG image");
+  }
+  const blob=await response.blob();
+  if(queryToken!==state.token||requestToken!==state.fitsRequest||channel!==Number($("channel-a").value))return;
+  const url=URL.createObjectURL(blob);
+  if(state.fitsPreviewUrl)URL.revokeObjectURL(state.fitsPreviewUrl);
+  state.fitsPreviewUrl=url;state.fitsPreviewChannel=channel;
+  const image=$("fits-preview-image");
+  image.src=url;
+  image.alt="Display-only grayscale preview from SPHEREx DR1 FITS channel "+(channel+1);
+  $("fits-preview-frame").hidden=false;
+
+  const coverage=Number(response.headers.get("x-spherex-coverage-fraction"));
+  const flags=Number(response.headers.get("x-spherex-flags-nonzero-pixels"));
+  const units=response.headers.get("x-spherex-units")||"Units not supplied";
+  const wavelengthUm=response.headers.get("x-spherex-wavelength-um");
+  setText("fits-preview-channel",channelLabel(channel)+(finite(wavelengthUm)?" · "+Number(wavelengthUm).toFixed(3)+" μm":""));
+  setText("fits-preview-coverage",finite(coverage)?(coverage*100).toFixed(2)+"%":"Not supplied");
+  setText("fits-preview-flags",finite(flags)?Math.trunc(flags).toLocaleString():"Not supplied");
+  setText("fits-preview-units",units);
+
+  const pixelX=Number(response.headers.get("x-spherex-query-pixel-x"));
+  const pixelY=Number(response.headers.get("x-spherex-query-pixel-y"));
+  const width=Number(response.headers.get("x-spherex-image-width"));
+  const height=Number(response.headers.get("x-spherex-image-height"));
+  const hasWcsPixel=[pixelX,pixelY,width,height].every(Number.isFinite)&&width>0&&height>0&&pixelX>=0&&pixelY>=0&&pixelX<width&&pixelY<height;
+  const marker=$("fits-preview-reticle");
+  if(hasWcsPixel){
+   marker.style.left=((pixelX+0.5)/width*100)+"%";
+   marker.style.top=((pixelY+0.5)/height*100)+"%";
+   marker.classList.add("is-visible");
+   setText("fits-preview-wcs","Query position mapped using FITS celestial WCS");
+  }else{
+   marker.classList.remove("is-visible");
+   setText("fits-preview-wcs","FITS WCS query position unavailable or outside this image · no marker shown");
+  }
+  setText("fits-preview-status","Loaded from NASA/IPAC IRSA · FITS structure inspected");
+  setText("prov-fits","Downloaded · FITS structure inspected");
+  setText("prov-science","Not performed");
+ }catch(error){
+  if(queryToken!==state.token||requestToken!==state.fitsRequest)return;
+  setText("fits-preview-status","FITS preview unavailable");
+  $("fits-preview-error").textContent=error.message;
+  $("fits-preview-error").classList.remove("hidden");
+  setText("prov-fits","Download or inspection failed");
+ }finally{
+  if(queryToken===state.token&&requestToken===state.fitsRequest)$("load-fits-preview").disabled=!state.cubeProductUrl;
+ }
 }
 function mjdDate(value){if(!finite(value))return"date unavailable";const d=new Date((Number(value)-40587)*86400000);return Number.isNaN(d.getTime())?"date unavailable":d.toISOString().slice(0,10);}
 function renderSiaRecords(items){
@@ -253,6 +358,7 @@ function wire(){
  $("blink-rate").addEventListener("input",e=>{state.rate=Number(e.target.value);setText("blink-rate-value",state.rate.toFixed(1)+"/s");if(state.playing){stopBlink();toggleBlink();}});
  $("swipe-range").addEventListener("input",e=>{state.swipe=Number(e.target.value);$("layer-b").style.clipPath="inset(0 0 0 "+state.swipe+"%)";$("frame-stage").style.setProperty("--swipe-position",state.swipe+"%");$("label-b").style.left="calc("+state.swipe+"% + 10px)";setText("swipe-value",state.swipe+"%");});
  $("neowise-button").addEventListener("click",queryNeowise);
+ $("load-fits-preview").addEventListener("click",loadFitsPreview);
  $("frame-stage").addEventListener("keydown",e=>{if(e.target!==$("frame-stage")||e.ctrlKey||e.metaKey||e.altKey)return;
   if(["1","2","3","4"].includes(e.key)){setMode(["blink","swipe","side","diff"][Number(e.key)-1]);e.preventDefault();}
   else if(e.key.toLowerCase()==="x"){$("swap-channels").click();e.preventDefault();}
