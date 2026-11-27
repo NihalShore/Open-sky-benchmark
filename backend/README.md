@@ -30,9 +30,11 @@ The browser frontend calls this service from a separate Vercel project. CORS all
 |---|---|---|
 | GET | `/api/v1/health` | Process health; does not contact IRSA |
 | POST | `/api/v1/search` | SPHEREx spectral-image product discovery through IRSA SIA2 |
-| GET | `/api/v1/cube/search` | DR1 All-Sky Cube tile discovery |
-| GET | `/api/v1/cube/preview` | Display-only PNG from one DR1 cube channel |
-| GET | `/api/v1/neowise/search` | NEOWISE-R single-exposure source measurements |
+| GET | `/api/v1/hips/metadata` | Official HiPS cube wavelength metadata |
+| GET | `/api/v1/hips/frame/{tile_id}/{channel_index}` | Display-only IRSA HiPS PNG frame |
+| GET | `/api/v1/cube/search` | DR1 All-Sky Cube FITS product discovery |
+| GET | `/api/v1/cube/preview` | FITS channel inspection and display-only PNG rendering |
+| GET | `/api/v1/neowise/search` | Bounded NEOWISE-R single-exposure measurements |
 
 ### SPHEREx spectral-image search
 
@@ -55,7 +57,9 @@ Coordinates are ICRS degrees. Right ascension must be in [0, 360), declination i
 
 `GET /api/v1/cube/preview?ra_deg=...&dec_deg=...&channel_index=0` retrieves a bounded FITS product from the official IRSA HTTPS host, validates the required extensions, extracts one channel, applies the `NHITS > 0` coverage mask, and returns a display-only RGBA PNG with uncovered pixels transparent. Pass the `access_url` returned by `/api/v1/cube/search` to reuse that discovery result. The response includes FITS-derived dimensions and, when the celestial WCS is usable and the requested position falls inside the image, zero-based query pixel coordinates. The PNG preserves FITS array row order so those coordinates refer to the displayed image. Add `metadata_only=true` to return the inspected channel metadata as JSON without rendering the PNG. Neither output is calibrated photometry or a scientific detection.
 
-The zero-based channel index is 0–101. Response headers include source, channel number, wavelength when available, coverage fraction, units, and a synthetic-data flag. The preview is not a calibrated photometry product. The code reads the FITS `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS` extensions; it does not use HiPS PNGs as science input.
+The zero-based channel index is 0–101. Response headers include source, channel number, wavelength when available, coverage fraction, units, a synthetic-data flag, image dimensions and the WCS-mapped query pixel when available. The preview is not a calibrated photometry product. The code reads the FITS `IMAGE`, `NHITS`, `FLAGS`, and `SPECTRAL_CHANNELS` extensions; it does not use HiPS PNGs as science input.
+
+The HiPS endpoints are a separate display path. The browser uses them for fast official PNG context and wavelength-channel comparisons; the FITS endpoint reads the actual DR1 cube product. Do not treat HiPS display-value differences as calibrated FITS residuals or time-domain motion.
 
 A small inspection utility is available:
 
@@ -73,7 +77,9 @@ The TAP query requests at most `limit + 1` rows, returns no more than `limit`, a
 
 The response also preserves astrometric uncertainty, transient flags, the solar-system positional-association flag, and AllWISE / 2MASS association identifiers and separations. Those catalog associations are positional matches (within 3 arcseconds), not confirmed identifications. The per-exposure `cntr` and `source_id` values identify a single extraction on a single frameset; they must not be treated as persistent source IDs.
 
-The catalog contains artifacts and low-quality rows. A returned measurement is not, by itself, evidence of a moving object. The frontend's reversible quality screen uses the published frame and transient-quality fields. A returned measurement or `sso_flg=1` association is not, by itself, a confirmed moving-object detection. Vetted NEOWISE moving-object tracklets are maintained separately by the Minor Planet Center.
+The catalog contains artifacts and low-quality rows. A returned measurement is not, by itself, evidence of a moving object. The frontend's reversible strict quality screen uses frame quality, quality-information factor, SAA separation, moon masking, contamination flags, transient flags and W1/W2 photometric quality. It can exclude genuine single-band detections, so it is optional.
+
+AllWISE and 2MASS matches are positional associations within 3 arcseconds, not confirmed identifications. The per-exposure `cntr` and `source_id` values are not persistent source IDs. A row with `sso_flg=1` is associated with a known object's predicted position, but that is not confirmation of a detection. The viewer does not draw trajectories or infer motion tracks. Vetted NEOWISE moving-object tracklets are maintained separately by the Minor Planet Center.
 
 ## Image-analysis modules
 
