@@ -150,8 +150,8 @@ function clearResults(){
  $("cube-products").replaceChildren(emptyBox("Contacting NASA/IPAC IRSA…"));$("sia-records").replaceChildren(emptyBox("Contacting NASA/IPAC IRSA…"));
  setText("prov-fits","Checking archive");setText("prov-preview","Requesting frames");setText("prov-science","Not performed");
  $("neowise-button").disabled=true;$("neowise-rows").replaceChildren();
- const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.className="table-empty";td.textContent="Run the separate NEOWISE-R query to retrieve dated measurements.";tr.append(td);$("neowise-rows").append(tr);
- setText("neowise-summary","No measurements loaded");$("light-curve").replaceChildren(chartEmpty("Waiting for measurements","NEOWISE-R is queried separately from the SPHEREx cube."));$("light-curve-legend").classList.add("hidden");
+ const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=6;td.className="table-empty";td.textContent="Run the separate NEOWISE-R query to retrieve dated measurements.";tr.append(td);$("neowise-rows").append(tr);
+ setText("neowise-summary","No measurements loaded");setText("association-summary","Catalog associations will appear after the NEOWISE-R query.");$("light-curve").replaceChildren(chartEmpty("Waiting for measurements","NEOWISE-R is queried separately from the SPHEREx cube."));$("light-curve-legend").classList.add("hidden");
 }
 async function loadMetadata(){
  const response=await api("/api/v1/hips/metadata",{},25000),payload=await response.json();
@@ -303,11 +303,53 @@ function renderSiaRecords(items){
 }
 function svgElement(name,attrs={}){const el=document.createElementNS("http://www.w3.org/2000/svg",name);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,String(v)));return el;}
 function renderMeasurements(detections){state.detections=detections.slice();renderFilteredMeasurements();}
+function passesIrsaQualityScreen(row){
+ const phot=String(row.photometric_quality||"").trim().toUpperCase();
+ const hasBandDetection=["A","B","C"].includes(phot[0])||["A","B","C"].includes(phot[1]);
+ return Number(row.frame_quality)>0&&Number(row.quality_info_factor)>0&&Number(row.saa_separation_deg)>0
+  &&String(row.moon_masked||"").trim()==="00"
+  &&String(row.contamination_flags||"").trim().toUpperCase().startsWith("00")
+  &&String(row.w1_transient_flags||"").trim()==="0000"
+  &&String(row.w2_transient_flags||"").trim()==="0000"
+  &&hasBandDetection;
+}
+function catalogAssociationsFor(row){
+ const matches=[];
+ for(const [type,idField,separationField,countField] of [
+  ["AllWISE","allwise_source_id","allwise_separation_arcsec","allwise_match_count"],
+  ["2MASS","tmass_source_id","tmass_separation_arcsec","tmass_match_count"]
+ ]){
+  const id=row[idField],count=Number(row[countField]),separation=Number(row[separationField]);
+  if(id!==null&&id!==undefined&&String(id).trim()!==""&&Number.isFinite(count)&&count>0){
+   matches.push({type,id:String(id),count,separation:Number.isFinite(separation)?separation:null});
+  }
+ }
+ return matches;
+}
+function renderCatalogAssociationSummary(rows){
+ const groups=new Map(),totals={AllWISE:0,"2MASS":0};
+ rows.forEach(row=>{
+  catalogAssociationsFor(row).forEach(match=>{
+   totals[match.type]++;
+   if(match.count!==1||!Number.isFinite(match.separation)||match.separation<0||match.separation>3)return;
+   const key=match.type+":"+match.id;
+   if(!groups.has(key))groups.set(key,{type:match.type,id:match.id,count:0});
+   groups.get(key).count++;
+  });
+ });
+ const repeated=[...groups.values()].filter(group=>group.count>1);
+ const repeatedRows=repeated.reduce((sum,group)=>sum+group.count,0);
+ setText("association-summary",
+  "IRSA positional matches: AllWISE "+totals.AllWISE+" · 2MASS "+totals["2MASS"]
+  +" · repeated unique-match groups: "+repeated.length+" ("+repeatedRows+" detections)"
+  +" · catalog matches are not source identifications; no tracks are inferred");
+}
 function renderFilteredMeasurements(){
  const detections=state.detections;
- const filtered=$("neowise-quality-filter").checked?detections.filter(r=>Number(r.frame_quality)>0&&String(r.contamination_flags??"").trim().toUpperCase()==="0000"&&/[ABC]/i.test(String(r.photometric_quality||""))):detections;
+ const filtered=$("neowise-quality-filter").checked?detections.filter(passesIrsaQualityScreen):detections;
  const rows=filtered.filter(r=>finite(r.mjd)).sort((a,b)=>Number(a.mjd)-Number(b.mjd)),w1=rows.filter(r=>finite(r.w1_mag)),w2=rows.filter(r=>finite(r.w2_mag));
  const values=[...w1.map(r=>Number(r.w1_mag)),...w2.map(r=>Number(r.w2_mag))];$("light-curve").replaceChildren();
+ renderCatalogAssociationSummary(rows);
  if(!rows.length||!values.length){
   $("light-curve").append(chartEmpty("No W1/W2 measurements returned","The query returned no usable dated band magnitudes."));$("light-curve-legend").classList.add("hidden");
   setText("neowise-summary",rows.length+" dated rows · no usable W1/W2 magnitudes");
@@ -315,8 +357,8 @@ function renderFilteredMeasurements(){
   const width=800,height=245,left=60,right=18,top=18,bottom=38,pw=width-left-right,ph=height-top-bottom;
   const mjds=rows.map(r=>Number(r.mjd)),minM=Math.min(...mjds),maxM=Math.max(...mjds),minV=Math.min(...values),maxV=Math.max(...values),span=Math.max(maxV-minV,.2);
   const x=v=>left+((Number(v)-minM)/Math.max(maxM-minM,1))*pw,y=v=>top+((Number(v)-(minV-.12*span))/(1.24*span))*ph;
-  const chart=svgElement("svg",{viewBox:"0 0 800 245",role:"img","aria-label":"NEOWISE-R nearby single-exposure measurements plotted by MJD. Points are not connected because source association is not performed."});
-  const title=svgElement("title");title.textContent="NEOWISE-R dated measurements by MJD · source association not performed";chart.append(title);
+  const chart=svgElement("svg",{viewBox:"0 0 800 245",role:"img","aria-label":"NEOWISE-R individual single-exposure magnitudes plotted by MJD. Points are not linked into tracks."});
+  const title=svgElement("title");title.textContent="NEOWISE-R single-exposure measurements by MJD · individual detections, not tracks";chart.append(title);
   for(let i=0;i<=4;i++){
    const yy=top+ph*i/4;chart.append(svgElement("line",{x1:left,x2:width-right,y1:yy,y2:yy,stroke:"#243849","stroke-width":1}));
    const label=svgElement("text",{x:left-9,y:yy+3,fill:"#91a6b7","font-size":9,"text-anchor":"end"});label.textContent=(minV-.12*span+1.24*span*i/4).toFixed(2);chart.append(label);
@@ -326,23 +368,31 @@ function renderFilteredMeasurements(){
   const yl=svgElement("text",{x:13,y:height/2,fill:"#91a6b7","font-size":10,transform:"rotate(-90 13 "+height/2+")","text-anchor":"middle"});yl.textContent="Magnitude";chart.append(xl,yl);
   for(const [band,series,color] of [["W1",w1,"#79e7df"],["W2",w2,"#b7a8ff"]]){
    series.forEach(row=>{const mag=Number(row[band.toLowerCase()+"_mag"]),point=svgElement("circle",{cx:x(row.mjd),cy:y(mag),r:3.1,fill:color,stroke:"#07111c","stroke-width":1});
-    const tip=svgElement("title");tip.textContent=band+" "+mag.toFixed(3)+" mag · MJD "+row.mjd+" · quality "+(row.photometric_quality||"not supplied")+" · scan "+(row.scan_id??"—")+" / frame "+(row.frame_num??"—");point.append(tip);chart.append(point);});
+    const association=catalogAssociationsFor(row).map(match=>match.type+" "+match.id+" · "+(match.separation===null?"separation unavailable":match.separation.toFixed(2)+" arcsec")).join("; ");
+    const tip=svgElement("title");tip.textContent=band+" "+mag.toFixed(3)+" mag · MJD "+row.mjd+" · ph_qual "+(row.photometric_quality||"—")+" · cc_flags "+(row.contamination_flags||"—")+" · AllWISE/2MASS "+(association||"no catalog match")+" · scan/frame "+(row.scan_id??"—")+"/"+(row.frame_num??"—");point.append(tip);chart.append(point);});
   }
   $("light-curve").append(chart);$("light-curve-legend").classList.remove("hidden");
-  setText("neowise-summary","Showing "+filtered.length+" of "+detections.length+" nearby rows ("+(detections.length-filtered.length)+" filtered out) · "+rows.length+" dated rows · W1: "+w1.length+" · W2: "+w2.length+" · span: "+(maxM-minM).toFixed(1)+" days · sources not cross-matched");
+  setText("neowise-summary","Showing "+filtered.length+" of "+detections.length+" nearby rows ("+(detections.length-filtered.length)+" hidden by filter) · "+rows.length+" dated rows · W1: "+w1.length+" · W2: "+w2.length+" · span: "+(maxM-minM).toFixed(1)+" days · no trajectory fit");
  }
  renderSkyPosition(rows);
  const body=$("neowise-rows");body.replaceChildren();
- if(!rows.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.className="table-empty";td.textContent="No dated NEOWISE-R rows returned.";tr.append(td);body.append(tr);}
+ if(!rows.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=6;td.className="table-empty";td.textContent="No dated NEOWISE-R rows returned.";tr.append(td);body.append(tr);}
  else{
-  rows.slice(0,100).forEach(r=>{const tr=document.createElement("tr"),cells=[Number(r.mjd).toFixed(3)+" / "+mjdDate(r.mjd),finite(r.w1_mag)?Number(r.w1_mag).toFixed(3):"—",finite(r.w2_mag)?Number(r.w2_mag).toFixed(3):"—",r.photometric_quality||r.frame_quality||"—",(r.scan_id??"—")+" / "+(r.frame_num??"—")];
-   cells.forEach(v=>{const td=document.createElement("td");td.textContent=String(v);tr.append(td);});body.append(tr);});
-  if(rows.length>100){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=5;td.className="table-empty";td.textContent="Showing first 100 of "+rows.length+" rows.";tr.append(td);body.append(tr);}
+  rows.slice(0,100).forEach(r=>{
+   const tr=document.createElement("tr"),associations=catalogAssociationsFor(r);
+   let associationLabel=associations.map(match=>match.type+" #"+match.id+" · "+(match.separation===null?"—":match.separation.toFixed(2)+"″")+(match.count>1?" · "+match.count+" nearby matches":"")).join("; ")||"No AllWISE / 2MASS match";
+   if(Number(r.solar_system_association_flag)===1)associationLabel+=" · sso_flg=1 (position only)";
+   const cells=[Number(r.mjd).toFixed(3)+" / "+mjdDate(r.mjd),finite(r.w1_mag)?Number(r.w1_mag).toFixed(3):"—",finite(r.w2_mag)?Number(r.w2_mag).toFixed(3):"—",r.photometric_quality||r.frame_quality||"—",associationLabel,(r.scan_id??"—")+" / "+(r.frame_num??"—")];
+   cells.forEach(v=>{const td=document.createElement("td");td.textContent=String(v);tr.append(td);});
+   if(Number(r.solar_system_association_flag)===1)tr.cells[4].title="IRSA sso_flg=1 is a positional association with a known object's predicted position, not confirmation of a detection.";
+   body.append(tr);
+  });
+  if(rows.length>100){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=6;td.className="table-empty";td.textContent="Showing first 100 of "+rows.length+" rows.";tr.append(td);body.append(tr);}
  }
 }
 async function renderSkyPosition(rows){
  const box=$("sky-position");box.replaceChildren();const valid=rows.filter(r=>finite(r.ra_deg)&&finite(r.dec_deg)&&finite(r.mjd));if(!valid.length){box.append(chartEmpty("No coordinate rows","Archive rows did not include usable sky positions."));$("sky-position-legend").classList.add("hidden");return;}
- const w=800,h=300,pad=45,ras=valid.map(r=>{let d=Number(r.ra_deg)-state.query.ra_deg;if(d>180)d-=360;if(d< -180)d+=360;return d*Math.cos(state.query.dec_deg*Math.PI/180)*3600;}),decs=valid.map(r=>(Number(r.dec_deg)-state.query.dec_deg)*3600),minX=Math.min(...ras),maxX=Math.max(...ras),minY=Math.min(...decs),maxY=Math.max(...decs),sx=Math.max(maxX-minX,.2),sy=Math.max(maxY-minY,.2),x=v=>pad+(v-minX)/sx*(w-2*pad),y=v=>h-pad-(v-minY)/sy*(h-2*pad),dates=valid.map(r=>Number(r.mjd)),lo=Math.min(...dates),hi=Math.max(...dates);const svg=svgElement("svg",{viewBox:"0 0 800 300",role:"img","aria-label":"Sky offsets of nearby NEOWISE-R detections, not cross-matched"});svg.append(svgElement("line",{x1:x(0),x2:x(0),y1:pad,y2:h-pad,stroke:"#8da5b6","stroke-opacity":".4"}),svgElement("line",{x1:pad,x2:w-pad,y1:y(0),y2:y(0),stroke:"#8da5b6","stroke-opacity":".4"}));
+ const w=800,h=300,pad=45,ras=valid.map(r=>{let d=Number(r.ra_deg)-state.query.ra_deg;if(d>180)d-=360;if(d< -180)d+=360;return d*Math.cos(state.query.dec_deg*Math.PI/180)*3600;}),decs=valid.map(r=>(Number(r.dec_deg)-state.query.dec_deg)*3600),minX=Math.min(...ras),maxX=Math.max(...ras),minY=Math.min(...decs),maxY=Math.max(...decs),sx=Math.max(maxX-minX,.2),sy=Math.max(maxY-minY,.2),x=v=>pad+(v-minX)/sx*(w-2*pad),y=v=>h-pad-(v-minY)/sy*(h-2*pad),dates=valid.map(r=>Number(r.mjd)),lo=Math.min(...dates),hi=Math.max(...dates);const svg=svgElement("svg",{viewBox:"0 0 800 300",role:"img","aria-label":"Sky offsets of individual NEOWISE-R single-exposure detections, colored by date. No source tracks are drawn."});svg.append(svgElement("line",{x1:x(0),x2:x(0),y1:pad,y2:h-pad,stroke:"#8da5b6","stroke-opacity":".4"}),svgElement("line",{x1:pad,x2:w-pad,y1:y(0),y2:y(0),stroke:"#8da5b6","stroke-opacity":".4"}));
  const interp=(v)=>{const t=(v-lo)/Math.max(hi-lo,1e-9);if(t<=.5){const u=t*2;return [121+(183-121)*u,231+(168-231)*u,223+(255-223)*u]}const u=(t-.5)*2;return [183+(255-183)*u,168+(196-168)*u,255+(124-255)*u]};valid.forEach((r,i)=>{const cx=x(ras[i]),cy=y(decs[i]),rgb=interp(Number(r.mjd)),p=svgElement("circle",{cx,cy,r:3.6,fill:"rgb("+rgb.join(",")+")"});const tip=svgElement("title");tip.textContent=mjdDate(r.mjd)+" · MJD "+Number(r.mjd).toFixed(3)+" · ΔRA "+ras[i].toFixed(3)+"″ · ΔDec "+decs[i].toFixed(3)+"″ · W1 "+(finite(r.w1_mag)?Number(r.w1_mag).toFixed(3):"—")+" · W2 "+(finite(r.w2_mag)?Number(r.w2_mag).toFixed(3):"—")+" · ph_qual "+(r.photometric_quality||"—")+" · cc_flags "+(r.contamination_flags||"—");p.append(tip);svg.append(p);});const tx=svgElement("text",{x:w/2,y:h-8,fill:"#9aabbd","font-size":10,"text-anchor":"middle"});tx.textContent="ΔRA cos δ (arcsec)";const ty=svgElement("text",{x:12,y:h/2,fill:"#9aabbd","font-size":10,"text-anchor":"middle",transform:"rotate(-90 12 "+h/2+")"});ty.textContent="ΔDec (arcsec)";svg.append(tx,ty);box.append(svg);const legend=$("sky-position-legend");legend.replaceChildren();legend.classList.remove("hidden");const text=document.createElement("span");text.textContent="MJD "+lo.toFixed(2)+" · "+mjdDate(lo);const gradient=document.createElement("span");gradient.className="sky-gradient";const end=document.createElement("span");end.textContent="MJD "+hi.toFixed(2)+" · "+mjdDate(hi);legend.append(text,gradient,end);
 }
 async function queryNeowise(){
@@ -351,7 +401,7 @@ async function queryNeowise(){
  try{
   const q=new URLSearchParams({ra_deg:String(state.query.ra_deg),dec_deg:String(state.query.dec_deg),radius_arcsec:String(Math.min(state.query.radius_arcsec,120)),limit:"200"});
   const response=await api("/api/v1/neowise/search?"+q,{},90000),payload=await response.json();renderMeasurements(payload.detections||[]);
-  const note=payload.notice||"Nearby NEOWISE-R single-exposure rows may include artifacts. Source association is not performed; review quality fields before interpretation.";
+  const note=payload.notice||"Nearby NEOWISE-R single-exposure rows may include artifacts. IRSA catalog matches are positional associations, not confirmed identifications; no moving-object tracks are inferred.";
   setText("neowise-note",payload.truncated?note+" Results are capped at "+q.get("limit")+" rows; narrow the search radius to inspect a smaller field.":note);
  }catch(e){$("light-curve").replaceChildren(chartEmpty("NEOWISE-R request failed",e.message));setText("neowise-summary","No measurements loaded");}
  finally{$("neowise-button").disabled=false;$("neowise-button").textContent="Query NEOWISE ↗";}
