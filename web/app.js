@@ -1,4 +1,5 @@
 import { raDecToHipsTile } from "./healpix.mjs";
+import { catalogAssociationsFor, passesIrsaQualityScreen, summarizeCatalogAssociations } from "./neowise.mjs";
 const API = "https://open-sky-timelens-api.vercel.app";
 const $ = (id) => document.getElementById(id);
 const BLANK = new Set([50, 51]);
@@ -303,45 +304,11 @@ function renderSiaRecords(items){
 }
 function svgElement(name,attrs={}){const el=document.createElementNS("http://www.w3.org/2000/svg",name);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,String(v)));return el;}
 function renderMeasurements(detections){state.detections=detections.slice();renderFilteredMeasurements();}
-function passesIrsaQualityScreen(row){
- const phot=String(row.photometric_quality||"").trim().toUpperCase();
- const hasBandDetection=["A","B","C"].includes(phot[0])||["A","B","C"].includes(phot[1]);
- return Number(row.frame_quality)>0&&Number(row.quality_info_factor)>0&&Number(row.saa_separation_deg)>0
-  &&String(row.moon_masked||"").trim()==="00"
-  &&String(row.contamination_flags||"").trim().toUpperCase().startsWith("00")
-  &&String(row.w1_transient_flags||"").trim()==="0000"
-  &&String(row.w2_transient_flags||"").trim()==="0000"
-  &&hasBandDetection;
-}
-function catalogAssociationsFor(row){
- const matches=[];
- for(const [type,idField,separationField,countField] of [
-  ["AllWISE","allwise_source_id","allwise_separation_arcsec","allwise_match_count"],
-  ["2MASS","tmass_source_id","tmass_separation_arcsec","tmass_match_count"]
- ]){
-  const id=row[idField],count=Number(row[countField]),separation=Number(row[separationField]);
-  if(id!==null&&id!==undefined&&String(id).trim()!==""&&Number.isFinite(count)&&count>0){
-   matches.push({type,id:String(id),count,separation:Number.isFinite(separation)?separation:null});
-  }
- }
- return matches;
-}
 function renderCatalogAssociationSummary(rows){
- const groups=new Map(),totals={AllWISE:0,"2MASS":0};
- rows.forEach(row=>{
-  catalogAssociationsFor(row).forEach(match=>{
-   totals[match.type]++;
-   if(match.count!==1||!Number.isFinite(match.separation)||match.separation<0||match.separation>3)return;
-   const key=match.type+":"+match.id;
-   if(!groups.has(key))groups.set(key,{type:match.type,id:match.id,count:0});
-   groups.get(key).count++;
-  });
- });
- const repeated=[...groups.values()].filter(group=>group.count>1);
- const repeatedRows=repeated.reduce((sum,group)=>sum+group.count,0);
+ const summary=summarizeCatalogAssociations(rows);
  setText("association-summary",
-  "IRSA positional matches: AllWISE "+totals.AllWISE+" · 2MASS "+totals["2MASS"]
-  +" · repeated unique-match groups: "+repeated.length+" ("+repeatedRows+" detections)"
+  "IRSA positional matches: AllWISE "+summary.allwiseMatches+" · 2MASS "+summary.tmassMatches
+  +" · repeated unique-match groups: "+summary.repeatedGroupCount+" ("+summary.repeatedDetectionCount+" detections)"
   +" · catalog matches are not source identifications; no tracks are inferred");
 }
 function renderFilteredMeasurements(){
@@ -368,7 +335,7 @@ function renderFilteredMeasurements(){
   const yl=svgElement("text",{x:13,y:height/2,fill:"#91a6b7","font-size":10,transform:"rotate(-90 13 "+height/2+")","text-anchor":"middle"});yl.textContent="Magnitude";chart.append(xl,yl);
   for(const [band,series,color] of [["W1",w1,"#79e7df"],["W2",w2,"#b7a8ff"]]){
    series.forEach(row=>{const mag=Number(row[band.toLowerCase()+"_mag"]),point=svgElement("circle",{cx:x(row.mjd),cy:y(mag),r:3.1,fill:color,stroke:"#07111c","stroke-width":1});
-    const association=catalogAssociationsFor(row).map(match=>match.type+" "+match.id+" · "+(match.separation===null?"separation unavailable":match.separation.toFixed(2)+" arcsec")).join("; ");
+    const association=catalogAssociationsFor(row).map(match=>match.type+" "+match.id+" · "+(match.separationArcsec===null?"separation unavailable":match.separationArcsec.toFixed(2)+" arcsec")).join("; ");
     const tip=svgElement("title");tip.textContent=band+" "+mag.toFixed(3)+" mag · MJD "+row.mjd+" · ph_qual "+(row.photometric_quality||"—")+" · cc_flags "+(row.contamination_flags||"—")+" · AllWISE/2MASS "+(association||"no catalog match")+" · scan/frame "+(row.scan_id??"—")+"/"+(row.frame_num??"—");point.append(tip);chart.append(point);});
   }
   $("light-curve").append(chart);$("light-curve-legend").classList.remove("hidden");
@@ -380,7 +347,7 @@ function renderFilteredMeasurements(){
  else{
   rows.slice(0,100).forEach(r=>{
    const tr=document.createElement("tr"),associations=catalogAssociationsFor(r);
-   let associationLabel=associations.map(match=>match.type+" #"+match.id+" · "+(match.separation===null?"—":match.separation.toFixed(2)+"″")+(match.count>1?" · "+match.count+" nearby matches":"")).join("; ")||"No AllWISE / 2MASS match";
+   let associationLabel=associations.map(match=>match.type+" #"+match.id+" · "+(match.separationArcsec===null?"—":match.separationArcsec.toFixed(2)+"″")+(match.count>1?" · "+match.count+" nearby matches":"")).join("; ")||"No AllWISE / 2MASS match";
    if(Number(r.solar_system_association_flag)===1)associationLabel+=" · sso_flg=1 (position only)";
    const cells=[Number(r.mjd).toFixed(3)+" / "+mjdDate(r.mjd),finite(r.w1_mag)?Number(r.w1_mag).toFixed(3):"—",finite(r.w2_mag)?Number(r.w2_mag).toFixed(3):"—",r.photometric_quality||r.frame_quality||"—",associationLabel,(r.scan_id??"—")+" / "+(r.frame_num??"—")];
    cells.forEach(v=>{const td=document.createElement("td");td.textContent=String(v);tr.append(td);});
