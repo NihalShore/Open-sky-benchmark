@@ -85,12 +85,14 @@ def test_cube_preview_returns_png_and_provenance_headers(monkeypatch):
         "wavelength_um": 0.8,
         "coverage_fraction": 0.75,
         "units": "MJy/sr",
+        "image_shape": [512, 512],
+        "query_pixel": {"x": 10.5, "y": 20.5},
     }
     monkeypatch.setattr(main, "discover_cube_products", lambda *args: [
         {"access_url": "https://irsa.ipac.caltech.edu/example.fits"}
     ])
     monkeypatch.setattr(main, "download_cube", lambda url: b"SIMPLE-fits-fixture")
-    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
+    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel, **kwargs: (metadata, object()))
     monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\x89PNG\r\n\x1a\nfixture")
 
     response = client.get("/api/v1/cube/preview?ra_deg=127.6&dec_deg=-39.1&channel_index=0")
@@ -101,6 +103,9 @@ def test_cube_preview_returns_png_and_provenance_headers(monkeypatch):
     assert response.headers["x-spherex-channel"] == "1"
     assert response.headers["x-spherex-wavelength-um"] == "0.8"
     assert response.headers["x-spherex-synthetic"] == "false"
+    assert response.headers["x-spherex-query-pixel-x"] == "10.5"
+    assert response.headers["x-spherex-query-pixel-y"] == "20.5"
+    assert response.headers["x-spherex-image-width"] == "512"
 
 
 
@@ -150,6 +155,7 @@ def test_cors_allows_production_frontend_and_exposes_fits_headers():
     exposed = response.headers["access-control-expose-headers"].lower()
     assert "x-spherex-wavelength-um" in exposed
     assert "x-spherex-flags-nonzero-pixels" in exposed
+    assert "x-spherex-query-pixel-x" in exposed
 
 
 def test_cors_allows_time_lens_preview_origin():
@@ -179,7 +185,7 @@ def test_cube_preview_reuses_the_discovered_irsa_url(monkeypatch):
 
     monkeypatch.setattr(main, "discover_cube_products", fail_discovery)
     monkeypatch.setattr(main, "download_cube", fake_download)
-    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
+    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel, **kwargs: (metadata, object()))
     monkeypatch.setattr(main, "render_preview_png", lambda plane: b"\x89PNG\r\n\x1a\nfixture")
 
     response = client.get(
@@ -222,7 +228,7 @@ def test_cube_preview_metadata_mode_returns_inspected_metadata(monkeypatch):
         {"access_url": product_url}
     ])
     monkeypatch.setattr(main, "download_cube", lambda url: b"SIMPLE-fits-fixture")
-    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel: (metadata, object()))
+    monkeypatch.setattr(main, "inspect_cube", lambda payload, channel, **kwargs: (metadata, object()))
     monkeypatch.setattr(
         main, "render_preview_png",
         lambda plane: (_ for _ in ()).throw(AssertionError("metadata mode should not render PNG")),
