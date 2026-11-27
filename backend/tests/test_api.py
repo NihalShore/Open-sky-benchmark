@@ -53,6 +53,7 @@ def test_search_returns_normalized_real_archive_metadata(monkeypatch):
     payload = response.json()
     assert payload["result_count"] == 1
     assert payload["synthetic"] is False
+    assert "max-age=300" in response.headers["cache-control"]
     assert payload["observations"][0]["observation_id"] == "TEST-OBS-001"
 
 
@@ -117,9 +118,9 @@ def test_neowise_search_returns_time_ordered_archive_measurements(monkeypatch):
 
     def fake_search(ra_deg, dec_deg, radius_arcsec, limit):
         assert (ra_deg, dec_deg, radius_arcsec, limit) == (127.6, -39.1, 15, 25)
-        return fake_detections
+        return fake_detections, True
 
-    monkeypatch.setattr(main, "search_neowise", fake_search)
+    monkeypatch.setattr(main, "search_neowise_with_status", fake_search)
     response = client.get(
         "/api/v1/neowise/search?ra_deg=127.6&dec_deg=-39.1&radius_arcsec=15&limit=25"
     )
@@ -129,6 +130,7 @@ def test_neowise_search_returns_time_ordered_archive_measurements(monkeypatch):
     assert payload["catalog"] == "neowiser_p1bs_psd"
     assert payload["time_field"] == "mjd"
     assert payload["bands"] == ["W1", "W2"]
+    assert payload["truncated"] is True
     assert payload["detections"][0]["mjd"] == 59000.0
     assert payload["synthetic"] is False
 
