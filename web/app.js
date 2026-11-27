@@ -184,8 +184,11 @@ function renderSiaRecords(items){
  });
 }
 function svgElement(name,attrs={}){const el=document.createElementNS("http://www.w3.org/2000/svg",name);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,String(v)));return el;}
-function renderMeasurements(detections){
- const rows=detections.filter(r=>finite(r.mjd)).sort((a,b)=>Number(a.mjd)-Number(b.mjd)),w1=rows.filter(r=>finite(r.w1_mag)),w2=rows.filter(r=>finite(r.w2_mag));
+function renderMeasurements(detections){state.detections=detections.slice();renderFilteredMeasurements();}
+function renderFilteredMeasurements(){
+ const detections=state.detections;
+ const filtered=$("neowise-quality-filter").checked?detections.filter(r=>Number(r.frame_quality)>0&&String(r.contamination_flags??"").trim().toUpperCase()==="0000"&&/[ABC]/i.test(String(r.photometric_quality||""))):detections;
+ const rows=filtered.filter(r=>finite(r.mjd)).sort((a,b)=>Number(a.mjd)-Number(b.mjd)),w1=rows.filter(r=>finite(r.w1_mag)),w2=rows.filter(r=>finite(r.w2_mag));
  const values=[...w1.map(r=>Number(r.w1_mag)),...w2.map(r=>Number(r.w2_mag))];$("light-curve").replaceChildren();
  if(!rows.length||!values.length){
   $("light-curve").append(chartEmpty("No W1/W2 measurements returned","The query returned no usable dated band magnitudes."));$("light-curve-legend").classList.add("hidden");
