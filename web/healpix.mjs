@@ -24,3 +24,12 @@ export function raDecToHipsTile(raDeg,decDeg,nside=HIPS_NSIDE){
  }
  return face*nside*nside+spreadBits(ix)+2*spreadBits(iy);
 }
+
+// Tile-local pixel coordinates use NESTED HEALPix x/y axes (ix increasing eastward within the face, iy increasing along the face's HEALPix axis); the IRSA HiPS tile image's display orientation may flip axes, so these coordinates are mathematical pixel coordinates, not astrometric validation of PNG orientation.
+export function raDecToHipsTilePixel(raDeg,decDeg,order=5,tileSize=512){
+ if(!Number.isInteger(order)||order<0||order>5)throw new RangeError("Tile order must be 0..5.");
+ if(!Number.isInteger(tileSize)||tileSize<1||(tileSize&(tileSize-1))!==0||tileSize>512)throw new RangeError("tileSize must be a power of two up to 512.");
+ const nside=(1<<order)*tileSize,pix=raDecToHipsTile(raDeg,decDeg,nside),face=Math.floor(pix/(nside*nside)),bits=pix-face*nside*nside;
+ let ix=0,iy=0;for(let bit=0;bit<16;bit++){ix|=((bits>>(2*bit))&1)<<bit;iy|=((bits>>(2*bit+1))&1)<<bit;}
+ const localMask=tileSize-1;return {tile:raDecToHipsTile(raDeg,decDeg,1<<order),x:ix&localMask,y:iy&localMask};
+}
