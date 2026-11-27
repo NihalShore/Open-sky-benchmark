@@ -111,12 +111,12 @@
             <div id="layer-a" class="frame-layer frame-a"><img id="image-a" alt="SPHEREx channel A from NASA IPAC IRSA"><span id="label-a" class="frame-label">FRAME A</span></div>
             <div id="swipe-divider" aria-hidden="true"></div><div id="layer-b" class="frame-layer frame-b"><img id="image-b" alt="SPHEREx channel B from NASA IPAC IRSA"><span id="label-b" class="frame-label">FRAME B</span></div>
             <canvas id="difference-canvas" aria-label="Display-value difference between channels B and A"></canvas>
-            <div class="stage-corners"><span id="stage-tile">NORDER 5 / NO TILE</span><span>HIΡS PNG · DISPLAY ONLY</span></div>
+            <div id="query-reticle" class="query-reticle" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M4 16h9M19 16h9M16 4v9M16 19v9" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="16" r="5" fill="none" stroke="currentColor" stroke-width="1"/></svg></div><div class="stage-corners"><span id="stage-tile">NORDER 5 / NO TILE</span><span>HIΡS PNG · DISPLAY ONLY</span></div>
           </div>
           <div class="viewer-footer">
             <div class="viewer-readout"><span id="comparison-caption">A ↔ B · waiting for archive frames</span><small id="viewer-coordinates">No field selected</small></div>
             <div class="viewer-actions">
-              <button id="blink-button" class="button button-small" type="button" disabled>Play blink</button>
+              <label class="compact-control reticle-toggle"><input id="reticle-toggle" type="checkbox" checked> Show query reticle</label>\n              <button id="blink-button" class="button button-small" type="button" disabled>Play blink</button>
               <label id="blink-rate-control" class="compact-control">Rate <input id="blink-rate" type="range" min="1" max="3" step="0.5" value="1.5"><span id="blink-rate-value">1.5/s</span></label>
               <label id="swipe-control" class="compact-control hidden">Divider <input id="swipe-range" type="range" min="5" max="95" value="50"><span id="swipe-value">50%</span></label>
             </div>
@@ -161,7 +161,7 @@
         <div id="light-curve" class="light-curve">
           <div class="chart-empty"><span>TIME SERIES</span><strong>Waiting for a field query</strong><small>Choose a position, then load NEOWISE measurements.</small></div>
         </div>
-        <div id="light-curve-legend" class="chart-legend hidden"><span class="legend-w1">W1 magnitude</span><span class="legend-w2">W2 magnitude</span><span class="legend-note">Lower magnitude = brighter</span></div>
+        <label class="quality-filter"><input id="neowise-quality-filter" type="checkbox"> Hide low-quality / contaminated rows</label>\n        <div id="sky-position" class="sky-position"><div class="chart-empty"><span>SKY POSITION</span><strong>Waiting for measurements</strong><small>Query NEOWISE-R to plot dated offsets.</small></div></div>\n        <p class="sky-caption">Nearby NEOWISE-R single-exposure positions relative to query center, colored by observation date. Source cross-matching is not performed.</p>\n        <div id="sky-position-legend" class="chart-legend hidden"></div>\n        <div id="light-curve-legend" class="chart-legend hidden"><span class="legend-w1">W1 magnitude</span><span class="legend-w2">W2 magnitude</span><span class="legend-note">Lower magnitude = brighter</span></div>
         <div id="neowise-summary" class="time-summary">No measurements loaded</div>
         <div class="table-wrap"><table class="data-table"><thead><tr><th>MJD / Date</th><th>W1 mag</th><th>W2 mag</th><th>Quality</th><th>Scan / frame</th></tr></thead><tbody id="neowise-rows"><tr><td colspan="5" class="table-empty">NEOWISE data will appear here.</td></tr></tbody></table></div>
         <p id="neowise-note" class="science-note">Catalog detections can include artifacts. Photometric quality, frame quality and contamination flags are shown for review; the app does not classify a moving object or confirm a source association.</p>
