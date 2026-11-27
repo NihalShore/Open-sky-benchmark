@@ -71,7 +71,9 @@ This performs a live archive query and download, so it requires network access a
 
 The TAP query requests at most `limit + 1` rows, returns no more than `limit`, and sets `truncated: true` when an additional row exists. Requests use finite connect/read timeouts and only follow redirects that remain on the IRSA host.
 
-The catalog contains artifacts and low-quality rows. A returned measurement is not, by itself, evidence of a moving object. Quality fields are preserved for downstream filtering and review.
+The response also preserves astrometric uncertainty, transient flags, the solar-system positional-association flag, and AllWISE / 2MASS association identifiers and separations. Those catalog associations are positional matches (within 3 arcseconds), not confirmed identifications. The per-exposure `cntr` and `source_id` values identify a single extraction on a single frameset; they must not be treated as persistent source IDs.
+
+The catalog contains artifacts and low-quality rows. A returned measurement is not, by itself, evidence of a moving object. The frontend's reversible quality screen uses the published frame and transient-quality fields. A returned measurement or `sso_flg=1` association is not, by itself, a confirmed moving-object detection. Vetted NEOWISE moving-object tracklets are maintained separately by the Minor Planet Center.
 
 ## Image-analysis modules
 
