@@ -3,6 +3,7 @@ from io import BytesIO
 import numpy as np
 import pytest
 from astropy.io import fits
+from astropy.wcs import WCS
 
 from app.services import spherex_cube
 from app.services.spherex_cube import (
@@ -30,9 +31,17 @@ def make_cube_fixture() -> bytes:
     ], name="SPECTRAL_CHANNELS")
     primary = fits.PrimaryHDU()
     primary.header["BLANKCH"] = "51,52"
+    image_hdu = fits.ImageHDU(data=image, name="IMAGE")
+    wcs = WCS(naxis=3)
+    wcs.wcs.ctype = ["RA---TAN", "DEC--TAN", "WAVE"]
+    wcs.wcs.cunit = ["deg", "deg", "um"]
+    wcs.wcs.crpix = [4.5, 4.5, 1.0]
+    wcs.wcs.crval = [127.6, -39.1, 0.8]
+    wcs.wcs.cdelt = [-0.01, 0.01, 0.04]
+    image_hdu.header.update(wcs.to_header())
     hdus = fits.HDUList([
         primary,
-        fits.ImageHDU(data=image, name="IMAGE"),
+        image_hdu,
         fits.ImageHDU(data=nhits, name="NHITS"),
         fits.ImageHDU(data=flags, name="FLAGS"),
         channels,
@@ -150,3 +159,29 @@ def test_discover_cube_products_uses_bounded_sia_query(monkeypatch):
     assert len(products) == 1
     assert products[0]["observation_id"] == "Npix445_cube"
     assert products[0]["synthetic"] is False
+
+
+
+def test_inspect_cube_maps_query_position_through_image_celestial_wcs():
+    metadata, _ = inspect_cube(
+        make_cube_fixture(),
+        channel_index=0,
+        ra_deg=127.6,
+        dec_deg=-39.1,
+    )
+
+    assert metadata["query_pixel_status"] == "available"
+    assert metadata["query_pixel"]["x"] == pytest.approx(3.5)
+    assert metadata["query_pixel"]["y"] == pytest.approx(3.5)
+
+
+def test_render_preview_keeps_uncovered_pixels_transparent():
+    from PIL import Image
+
+    _, plane = inspect_cube(make_cube_fixture(), channel_index=0)
+    png = render_preview_png(plane)
+
+    with Image.open(BytesIO(png)) as image:
+        rgba = image.convert("RGBA")
+        assert rgba.getpixel((0, 0))[3] == 0
+        assert rgba.getpixel((1, 0))[3] == 255
