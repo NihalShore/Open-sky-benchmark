@@ -47,7 +47,7 @@ The browser frontend calls this service from a separate Vercel project. CORS all
 }
 ```
 
-Coordinates are ICRS degrees. Right ascension must be in [0, 360), declination in [-90, 90], and the search radius must be positive and no greater than 1,800 arcseconds. The response contains SIA2 metadata, not a guarantee of an exact cutout.
+Coordinates are ICRS degrees. Right ascension must be in [0, 360), declination in [-90, 90], and the search radius must be positive and no greater than 1,800 arcseconds. The response contains SIA2 metadata, not a guarantee of an exact cutout. Requests use a finite upstream timeout and a bounded `MAXREC` value so a wide query cannot return an unbounded result table.
 
 ### DR1 All-Sky Cube
 
@@ -68,6 +68,8 @@ This performs a live archive query and download, so it requires network access a
 ### NEOWISE-R single-exposure search
 
 `GET /api/v1/neowise/search?ra_deg=...&dec_deg=...&radius_arcsec=15&limit=200` queries the `neowiser_p1bs_psd` catalog. Results are sorted by MJD and retain W1/W2 magnitudes, uncertainties, S/N, photometric quality, frame quality, contamination flags, and scan/frame identifiers.
+
+The TAP query requests at most `limit + 1` rows, returns no more than `limit`, and sets `truncated: true` when an additional row exists. Requests use finite connect/read timeouts and only follow redirects that remain on the IRSA host.
 
 The catalog contains artifacts and low-quality rows. A returned measurement is not, by itself, evidence of a moving object. Quality fields are preserved for downstream filtering and review.
 
