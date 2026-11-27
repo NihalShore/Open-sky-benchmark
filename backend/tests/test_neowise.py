@@ -90,6 +90,12 @@ def test_search_uses_bounded_ordered_tap_query_and_reports_truncation(monkeypatc
     assert "TOP 2" in calls["adql"]
     assert "FROM neowiser_p1bs_psd" in calls["adql"]
     assert "ORDER BY mjd ASC, scan_id ASC, frame_num ASC" in calls["adql"]
+    for column in (
+        "source_id", "sigra", "sigdec", "sigradec", "det_bit", "sso_flg",
+        "w1frtr", "w2frtr", "allwise_cntr", "r_allwise", "n_allwise",
+        "tmass_key", "r_2mass", "n_2mass",
+    ):
+        assert column in calls["adql"]
     assert calls["maxrec"] == 2
     assert truncated is True
     assert [item["mjd"] for item in results] == [59001.0]
