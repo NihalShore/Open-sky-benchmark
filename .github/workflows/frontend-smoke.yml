@@ -27,3 +27,5 @@ jobs:
           npx eslint web/app.js
       - name: Test HEALPix coordinate lookup
         run: node --test web/tests/healpix.test.mjs
+      - name: Test NEOWISE quality and catalog associations
+        run: node --test web/tests/neowise.test.mjs
