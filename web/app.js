@@ -177,7 +177,7 @@ function renderSiaRecords(items){
   const card=document.createElement("article"),details=document.createElement("div");card.className="record-card";
   const title=document.createElement("strong"),meta=document.createElement("small");title.textContent=item.observation_id||"SPHEREx observation";
   const date=finite(item.observation_start_mjd)?"MJD "+Number(item.observation_start_mjd).toFixed(2)+" · "+mjdDate(item.observation_start_mjd):"Observation date not supplied";
-  const band=item.bandpass_name||item.data_product_type||"spectral image",range=finite(item.wavelength_min)&&finite(item.wavelength_max)?" · "+item.wavelength_min+"–"+item.wavelength_max+" μm":"";
+  const band=item.bandpass_name||item.data_product_type||"spectral image",range=finite(item.wavelength_min)&&finite(item.wavelength_max)?" · "+(Number(item.wavelength_min)*1e6).toFixed(3)+"–"+(Number(item.wavelength_max)*1e6).toFixed(3)+" μm":"";
   meta.textContent=(item.collection||"SPHEREx")+" · "+band+range+" · "+date;details.append(title,meta);card.append(details);
   if(typeof item.access_url==="string"&&item.access_url.startsWith("https://irsa.ipac.caltech.edu/")){const link=document.createElement("a");link.href=item.access_url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="OPEN ↗";card.append(link);}
   $("sia-records").append(card);
@@ -224,8 +224,8 @@ async function queryNeowise(){
  try{
   const q=new URLSearchParams({ra_deg:String(state.query.ra_deg),dec_deg:String(state.query.dec_deg),radius_arcsec:String(Math.min(state.query.radius_arcsec,120)),limit:"200"});
   const response=await api("/api/v1/neowise/search?"+q,{},90000),payload=await response.json();renderMeasurements(payload.detections||[]);
-  text("neowise-note",payload.notice||"Nearby NEOWISE-R single-exposure rows may include artifacts. Source association is not performed; review quality fields before interpretation.");
- }catch(e){$("light-curve").replaceChildren(chartEmpty("NEOWISE-R request failed",e.message));text("neowise-summary","No measurements loaded");}
+  setText("neowise-note",payload.notice||"Nearby NEOWISE-R single-exposure rows may include artifacts. Source association is not performed; review quality fields before interpretation.");
+ }catch(e){$("light-curve").replaceChildren(chartEmpty("NEOWISE-R request failed",e.message));setText("neowise-summary","No measurements loaded");}
  finally{$("neowise-button").disabled=false;$("neowise-button").textContent="Query NEOWISE ↗";}
 }
 function wire(){
@@ -251,7 +251,7 @@ async function init(){
  wire();status("api-status","checking","CHECKING API");
  try{const response=await api("/api/v1/health",{},12000),health=await response.json();if(health.status!=="ok")throw new Error("Unexpected health response");status("api-status","online","API ONLINE");}
  catch(e){status("api-status","offline","API OFFLINE");status("viewer-status","error","API NOT CONNECTED");notice("TimeLens API health check failed: "+e.message+". Live archive data cannot be loaded.");}
- try{await loadMetadata();}catch(e){text("prov-preview","Wavelength metadata unavailable");notice("IRSA wavelength metadata could not be loaded: "+e.message);}
+ try{await loadMetadata();}catch(e){setText("prov-preview","Wavelength metadata unavailable");notice("IRSA wavelength metadata could not be loaded: "+e.message);}
  renderStage();
 }
 init();
