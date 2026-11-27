@@ -11,7 +11,7 @@
 #layer-a .frame-label{border-color:rgba(121,231,223,.65);color:#b1fff6}
 #layer-b .frame-label{border-color:rgba(255,196,124,.65);color:#ffc47c;left:10px}
 #swipe-divider{display:none;position:absolute;z-index:4;top:0;bottom:0;left:50%;width:2px;background:#edf4fa;box-shadow:0 0 8px rgba(0,0,0,.7);pointer-events:none}
-#swipe-divider:after{content:"↔";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:24px;height:24px;border:1px solid #edf4fa;border-radius:50%;background:#08111c;color:#edf4fa;font:12px var(--sans}
+#swipe-divider:after{content:"↔";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:24px;height:24px;border:1px solid #edf4fa;border-radius:50%;background:#08111c;color:#edf4fa;font:12px var(--sans)
 .frame-stage.mode-swipe #swipe-divider{display:block;left:var(--swipe-position,50%)}
 body,.record-card small,.data-table,.data-table th,.data-table td,.status-line,.channel-status,.field-hint,.time-summary{font-size:12px}
 .data-table th{font-size:12px}.data-table td{font-size:12px}.record-card small{font-size:12px}
