@@ -1,4 +1,4 @@
-import { raDecToHipsTile, raDecToHipsTilePixel } from "./healpix.mjs";
+import { raDecToHipsTile } from "./healpix.mjs";
 const API = "https://open-sky-timelens-api.vercel.app";
 const $ = (id) => document.getElementById(id);
 const BLANK = new Set([50, 51]);
@@ -52,7 +52,7 @@ function drawDifference(){
 }
 function renderStage(){
  const stage=$("frame-stage");
- const reticle=$("query-reticle");if(state.query&&state.tile!==null){const p=raDecToHipsTilePixel(state.query.ra_deg,state.query.dec_deg);reticle.style.left=(p.x/512*100)+"%";reticle.style.top=(p.y/512*100)+"%";stage.classList.toggle("has-query-reticle", $("reticle-toggle").checked);}else stage.classList.remove("has-query-reticle");stage.classList.remove("mode-blink","mode-swipe","mode-side","mode-diff","show-b","has-a","has-b");
+ stage.classList.remove("mode-blink","mode-swipe","mode-side","mode-diff","show-b","has-a","has-b");
  stage.classList.add("mode-"+state.mode);if(state.showB)stage.classList.add("show-b");
  if(state.frames.A)stage.classList.add("has-a");if(state.frames.B)stage.classList.add("has-b");
  $("frame-empty").classList.toggle("hidden",Boolean(state.frames.A||state.frames.B));
@@ -241,7 +241,7 @@ async function queryNeowise(){
 function wire(){
  $("search-form").addEventListener("submit",loadField);
  $("target-preset").addEventListener("change",e=>{const p=PRESETS[e.target.value];if(p){$("ra").value=p[0];$("dec").value=p[1];}const notes={wise0855:"WISE 0855 — coldest known brown dwarf (~250 K): compare short near-IR (~1.5 μm) vs. 4.6 μm, then query NEOWISE-R to inspect its dated W2 measurements and sky drift.",barnard:"Barnard’s Star — highest proper-motion star (~10.3″/yr): inspect the field in SPHEREx, then query NEOWISE-R to see multi-year position drift across MJD.",epsilonindi:"ε Indi — nearby K-dwarf + brown dwarf system: compare short vs. long SPHEREx channels and review dated NEOWISE-R rows.",field:"Reference SPHEREx DR1 test field (NPIX 9822): verified against IRSA SIA2 and DR1 All-Sky Cube discovery."};setText("target-science-note",notes[e.target.value]||"Choose a reference preset or enter custom coordinates.");});
- $("neowise-quality-filter").addEventListener("change",renderFilteredMeasurements);$("reticle-toggle").addEventListener("change",renderStage);
+ $("neowise-quality-filter").addEventListener("change",renderFilteredMeasurements);
  document.querySelectorAll(".mode-button").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));
  $("channel-a").addEventListener("input",updateLabels);$("channel-b").addEventListener("input",updateLabels);
  $("channel-a").addEventListener("change",()=>state.tile!==null&&loadFrame("A"));$("channel-b").addEventListener("change",()=>state.tile!==null&&loadFrame("B"));
