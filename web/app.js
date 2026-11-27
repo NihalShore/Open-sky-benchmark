@@ -234,7 +234,8 @@ async function queryNeowise(){
  try{
   const q=new URLSearchParams({ra_deg:String(state.query.ra_deg),dec_deg:String(state.query.dec_deg),radius_arcsec:String(Math.min(state.query.radius_arcsec,120)),limit:"200"});
   const response=await api("/api/v1/neowise/search?"+q,{},90000),payload=await response.json();renderMeasurements(payload.detections||[]);
-  setText("neowise-note",payload.notice||"Nearby NEOWISE-R single-exposure rows may include artifacts. Source association is not performed; review quality fields before interpretation.");
+  const note=payload.notice||"Nearby NEOWISE-R single-exposure rows may include artifacts. Source association is not performed; review quality fields before interpretation.";
+  setText("neowise-note",payload.truncated?note+" Results are capped at "+q.get("limit")+" rows; narrow the search radius to inspect a smaller field.":note);
  }catch(e){$("light-curve").replaceChildren(chartEmpty("NEOWISE-R request failed",e.message));setText("neowise-summary","No measurements loaded");}
  finally{$("neowise-button").disabled=false;$("neowise-button").textContent="Query NEOWISE ↗";}
 }
