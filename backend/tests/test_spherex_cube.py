@@ -115,3 +115,38 @@ def test_download_cube_accepts_full_tile_over_previous_limit(monkeypatch):
     )
 
     assert payload.startswith(b"SIMPLE")
+
+
+
+def test_discover_cube_products_uses_bounded_sia_query(monkeypatch):
+    calls = {}
+
+    def fake_query(ra_deg, dec_deg, radius_arcsec, collections, *, maxrec):
+        calls.update({
+            "ra_deg": ra_deg,
+            "dec_deg": dec_deg,
+            "radius_arcsec": radius_arcsec,
+            "collections": collections,
+            "maxrec": maxrec,
+        })
+        return [{
+            "obs_id": "Npix445_cube",
+            "obs_collection": "spherex_dr1_cube",
+            "dataproduct_type": "cube",
+            "access_format": "application/fits",
+            "access_url": "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/example.fits",
+        }]
+
+    monkeypatch.setattr(spherex_cube, "query_sia", fake_query)
+    products = spherex_cube.discover_cube_products(60.8109955, 51.3404038, 30)
+
+    assert calls == {
+        "ra_deg": 60.8109955,
+        "dec_deg": 51.3404038,
+        "radius_arcsec": 30,
+        "collections": ["spherex_dr1_cube"],
+        "maxrec": spherex_cube.MAX_CUBE_SEARCH_RECORDS,
+    }
+    assert len(products) == 1
+    assert products[0]["observation_id"] == "Npix445_cube"
+    assert products[0]["synthetic"] is False
