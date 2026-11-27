@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 
 from app.services.irsa import ALLOWED_COLLECTIONS, search_spherex
-from app.services.neowise import search_neowise
+from app.services.neowise import search_neowise_with_status
 from app.services.spherex_cube import (
     CubeDataError,
     discover_cube_products,
@@ -92,7 +92,7 @@ async def health() -> dict[str, str]:
 
 
 @app.post("/api/v1/search")
-async def search_observations(request: SearchRequest) -> dict:
+async def search_observations(request: SearchRequest, response: Response) -> dict:
     """Discover public SPHEREx spectral-image products overlapping a position."""
     if not set(request.collections).issubset(ALLOWED_COLLECTIONS):
         raise HTTPException(status_code=422, detail="Unsupported SPHEREx collection")
@@ -104,10 +104,13 @@ async def search_observations(request: SearchRequest) -> dict:
             request.radius_arcsec,
             request.collections,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("SPHEREx SIA2 spectral-image search failed")
         raise HTTPException(status_code=502, detail="IRSA SPHEREx search failed; retry later") from exc
 
+    response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=600"
     return {
         "search_id": f"SEARCH-{uuid4().hex[:12].upper()}",
         "status": "completed",
@@ -130,19 +133,23 @@ async def search_observations(request: SearchRequest) -> dict:
 
 @app.get("/api/v1/neowise/search")
 async def search_neowise_sources(
+    response: Response,
     ra_deg: float = Query(ge=0, lt=360),
     dec_deg: float = Query(ge=-90, le=90),
     radius_arcsec: float = Query(default=15, gt=0, le=1800),
     limit: int = Query(default=200, ge=1, le=500),
 ) -> dict:
-    """Return dated NEOWISE-R single-exposure source measurements."""
+    """Return bounded, dated NEOWISE-R single-exposure source measurements."""
     try:
-        detections = await run_in_threadpool(
-            search_neowise, ra_deg, dec_deg, radius_arcsec, limit
+        detections, truncated = await run_in_threadpool(
+            search_neowise_with_status, ra_deg, dec_deg, radius_arcsec, limit
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("NEOWISE single-exposure search failed")
         raise HTTPException(status_code=502, detail="IRSA NEOWISE search failed; retry later") from exc
+    response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=600"
 
     return {
         "status": "completed",
@@ -155,6 +162,7 @@ async def search_neowise_sources(
             "limit": limit,
         },
         "result_count": len(detections),
+        "truncated": truncated,
         "detections": detections,
         "time_field": "mjd",
         "bands": ["W1", "W2"],
@@ -173,8 +181,9 @@ _HIPS_PROPERTIES_URL = "https://irsa.ipac.caltech.edu/data/hips/SPHEREx/spherex_
 
 
 @app.get("/api/v1/hips/metadata")
-async def hips_metadata() -> dict:
+async def hips_metadata(response: Response) -> dict:
     """Return official wavelength metadata for the display-only HiPS cube."""
+    response.headers["Cache-Control"] = "public, max-age=86400"
     try:
         response = await run_in_threadpool(requests.get, _HIPS_PROPERTIES_URL, timeout=15)
         response.raise_for_status()
@@ -248,6 +257,7 @@ async def hips_frame(
 
 @app.get("/api/v1/cube/search")
 async def search_cube(
+    response: Response,
     ra_deg: float = Query(ge=0, lt=360),
     dec_deg: float = Query(ge=-90, le=90),
     radius_arcsec: float = Query(default=30, gt=0, le=1800),
@@ -257,9 +267,12 @@ async def search_cube(
         products = await run_in_threadpool(
             discover_cube_products, ra_deg, dec_deg, radius_arcsec
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("SPHEREx DR1 cube discovery failed")
         raise HTTPException(status_code=502, detail="IRSA cube discovery failed; retry later") from exc
+    response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=600"
     return {
         "status": "completed",
         "source_archive": "NASA/IPAC IRSA",
