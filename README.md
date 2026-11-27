@@ -25,6 +25,7 @@
   <a href="#quick-start">Quick start</a> ·
   <a href="#api-at-a-glance">API</a> ·
   <a href="backend/README.md">Backend guide</a> ·
+  <a href="docs/using-timelens.md">Using TimeLens</a> ·
   <a href="#scientific-integrity">Scientific integrity</a>
 </p>
 
@@ -41,8 +42,9 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
 | Capability | What is implemented |
 |---|---|
 | **SPHEREx discovery** | IRSA SIA2 searches for DR1 / QR3 spectral-image metadata |
-| **SPHEREx DR1 cube** | Tile discovery, bounded FITS retrieval, channel extraction, coverage-masked PNG preview |
-| **NEOWISE-R** | Single-exposure measurements with quality metadata and AllWISE / 2MASS positional-association evidence |
+| **HiPS spectral viewer** | Official IRSA 102-channel PNG frames with blink, swipe, side-by-side and display-value comparison |
+| **SPHEREx DR1 cube** | Bounded FITS retrieval, channel extraction, transparent coverage masking and FITS-WCS query-pixel mapping |
+| **NEOWISE-R** | Single-exposure measurements, quality metadata and AllWISE / 2MASS positional-association evidence |
 | **WCS registration** | Bilinear reprojection of a target image onto a reference celestial grid |
 | **Difference analysis** | Common-coverage masking and robust residual ranking using median absolute deviation |
 
@@ -50,7 +52,13 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
   <img src="docs/architecture.svg" alt="TimeLens system architecture" width="100%">
 </p>
 
-## Live demo\n\n<https://open-sky-timelens.vercel.app/> — deployed archive-backed web explorer. The FastAPI service is deployed at <https://open-sky-timelens-api.vercel.app>.\n\n## Project status
+## Live demo
+
+<https://open-sky-timelens.vercel.app/> — deployed archive-backed web explorer. The FastAPI service is deployed at <https://open-sky-timelens-api.vercel.app>.
+
+See the [TimeLens user guide](docs/using-timelens.md) for the field-to-archive workflow and how to interpret each view.
+
+## Project status
 
 > **Research prototype · Public archive explorer + FastAPI service**
 >
@@ -58,11 +66,11 @@ TimeLens brings several archive and image-analysis steps into one small, reprodu
 
 | Available now | Not implemented or not yet validated |
 |---|---|
-| Coordinate-validated FastAPI endpoints | Calibrated multi-epoch comparison with PSF matching and uncertainty propagation |
-| SPHEREx SIA2 and DR1 cube discovery | PSF matching or photometric scaling across epochs |
-| NEOWISE-R single-exposure query | Uncertainty-map propagation |
-| FITS channel preview with coverage masking | Automated moving-object classification or Planet X detection |
-| WCS reprojection and difference primitives | Calibrated multi-epoch science validation or automated source association |
+| Coordinate-validated FastAPI endpoints and bounded IRSA queries | Calibrated multi-epoch comparison with PSF matching and uncertainty propagation |
+| SPHEREx SIA2, DR1 cube discovery and 102-channel HiPS display viewer | PSF matching or photometric scaling across epochs |
+| Separate FITS-derived channel preview with NHITS coverage and FITS-WCS coordinate mapping | Uncertainty-map propagation |
+| NEOWISE-R single-exposure data, reversible quality screen and positional catalog-association evidence | Automated source linking, trajectory fitting or moving-object classification |
+| WCS reprojection and difference primitives | Automated Planet X detection or scientifically validated candidate confirmation |
 
 ## Quick start
 
@@ -97,11 +105,13 @@ The health endpoint checks that the API process is alive. It deliberately does n
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| `GET` | `/api/v1/health` | Local process health |
+| `GET` | `/api/v1/health` | Local process health; does not contact IRSA |
 | `POST` | `/api/v1/search` | Search SPHEREx spectral-image products through IRSA SIA2 |
-| `GET` | `/api/v1/cube/search` | Find DR1 All-Sky Cube tiles around an ICRS position |
-| `GET` | `/api/v1/cube/preview` | Return a display-only PNG for one zero-based cube channel |
-| `GET` | `/api/v1/neowise/search` | Query NEOWISE-R single-exposure source measurements |
+| `GET` | `/api/v1/hips/metadata` | Read the official HiPS wavelength table |
+| `GET` | `/api/v1/hips/frame/{tile_id}/{channel_index}` | Proxy one display-only IRSA HiPS PNG frame |
+| `GET` | `/api/v1/cube/search` | Find DR1 All-Sky Cube FITS products around an ICRS position |
+| `GET` | `/api/v1/cube/preview` | Inspect and render one FITS channel, with coverage and WCS metadata |
+| `GET` | `/api/v1/neowise/search` | Query bounded NEOWISE-R single-exposure measurements |
 
 ### Example: discover SPHEREx observations
 
@@ -123,7 +133,7 @@ curl -o channel-1.png \
   "http://127.0.0.1:8000/api/v1/cube/preview?ra_deg=127.69444&dec_deg=-39.17760&channel_index=0"
 ```
 
-The channel index is zero-based. The preview is for visual inspection, not calibrated photometry. The response includes provenance, wavelength when available, units, and coverage metadata.
+The channel index is zero-based. The FITS preview is rendered separately from the HiPS viewer. It preserves uncovered pixels as transparent and returns a query-pixel location only when the FITS celestial WCS maps the requested coordinate inside the image. It is for visual inspection, not calibrated photometry.
 
 ### Example: query NEOWISE-R
 
@@ -132,7 +142,7 @@ curl \
   "http://127.0.0.1:8000/api/v1/neowise/search?ra_deg=127.69444&dec_deg=-39.17760&radius_arcsec=15"
 ```
 
-Measurements are returned in MJD order. Photometric and contamination-quality fields are preserved so downstream analysis can make explicit quality decisions.
+Measurements are returned in MJD order and capped by the requested limit. The response preserves astrometric uncertainty, photometric and transient-quality fields, AllWISE / 2MASS positional associations and the IRSA solar-system association flag. Positional associations are not confirmed source identities; per-exposure identifiers are not persistent source IDs. See the [user guide](docs/using-timelens.md) for interpretation limits.
 
 ## WCS comparison pipeline
 
