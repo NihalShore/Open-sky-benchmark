@@ -12,11 +12,10 @@ from urllib.parse import urlparse
 
 import numpy as np
 import requests
-from astropy.coordinates import SkyCoord
 from astropy.io import fits
-import astropy.units as u
-from astroquery.ipac.irsa import Irsa
 from PIL import Image
+
+from app.services.irsa import normalize_observation, query_sia
 
 IRSA_HOST = "irsa.ipac.caltech.edu"
 CUBE_COLLECTION = "spherex_dr1_cube"
@@ -31,7 +30,9 @@ class CubeDataError(RuntimeError):
 
 
 def trusted_cube_url(value: str) -> str:
-    """Accept only HTTPS URLs on the official IRSA host and standard port."""
+    """Accept only clean HTTPS URLs on the official IRSA host and standard port."""
+    if not isinstance(value, str) or any(ch.isspace() or ord(ch) < 32 for ch in value):
+        raise CubeDataError("Archive returned an invalid cube URL")
     parsed = urlparse(value)
     if (
         parsed.scheme != "https"
@@ -44,24 +45,30 @@ def trusted_cube_url(value: str) -> str:
     return value
 
 
+MAX_CUBE_SEARCH_RECORDS = 100
+
+
 def discover_cube_products(ra_deg: float, dec_deg: float, radius_arcsec: float = 30) -> list[dict[str, Any]]:
-    """Find DR1 All-Sky Cube tiles overlapping an ICRS position."""
-    position = SkyCoord(ra=ra_deg, dec=dec_deg, unit="deg", frame="icrs")
-    table = Irsa.query_sia(
-        pos=(position, radius_arcsec * u.arcsec),
-        collection=CUBE_COLLECTION,
+    """Find a bounded set of DR1 All-Sky Cube tiles overlapping an ICRS position."""
+    table = query_sia(
+        ra_deg,
+        dec_deg,
+        radius_arcsec,
+        [CUBE_COLLECTION],
+        maxrec=MAX_CUBE_SEARCH_RECORDS,
     )
     products: list[dict[str, Any]] = []
     for row in table:
+        observation = normalize_observation(row)
         try:
-            access_url = trusted_cube_url(str(row["access_url"]))
+            access_url = trusted_cube_url(observation["access_url"])
         except (KeyError, TypeError, ValueError, CubeDataError):
             continue
         products.append({
-            "observation_id": _value(row, "obs_id"),
-            "collection": _value(row, "obs_collection"),
-            "data_product_type": _value(row, "dataproduct_type"),
-            "access_format": _value(row, "access_format"),
+            "observation_id": observation["observation_id"],
+            "collection": observation["collection"],
+            "data_product_type": observation["data_product_type"],
+            "access_format": observation["access_format"],
             "access_url": access_url,
             "source_archive": "NASA/IPAC IRSA",
             "synthetic": False,
